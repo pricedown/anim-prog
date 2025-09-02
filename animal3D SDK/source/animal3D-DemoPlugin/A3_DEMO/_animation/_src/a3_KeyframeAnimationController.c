@@ -55,11 +55,23 @@ a3i32 a3clipControllerUpdate(a3_ClipController* clipCtrl, a3f64 dt)
 //****TO-DO-ANIM-PROJECT-1: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
+
 		// start with keyframe, resolving the total clip time
 		// 1. increment time
 		clipCtrl->clipTime_sec += dt;
 
 		// 2. resolve current keyframe
+		while (clipCtrl->clipTime_sec >= clipCtrl->keyframe->sampleIndex1) 
+		{
+			clipCtrl->keyframeIndex++;
+			clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
+		}
+
+		while (clipCtrl->clipTime_sec < clipCtrl->keyframe->sampleIndex0) 
+		{
+			clipCtrl->keyframeIndex--;
+			clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
+		}
 		//		a. paused: dt = 0
 		//		b. forward: dt > 0
 		//			i. stop
@@ -70,6 +82,8 @@ a3i32 a3clipControllerUpdate(a3_ClipController* clipCtrl, a3f64 dt)
 		//			ii. step(s) taken
 		//			iii. clip exited
 		// 3. recompute param (keyframe time)
+		clipCtrl->keyframeParam = (clipCtrl->clipTime_sec - clipCtrl->keyframe->sampleIndex0)
+			/ (clipCtrl->keyframe->sampleIndex1 - (clipCtrl->keyframe->sampleIndex0));
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-1
