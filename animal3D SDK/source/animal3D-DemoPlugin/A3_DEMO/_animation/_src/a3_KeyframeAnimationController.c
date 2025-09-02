@@ -55,7 +55,21 @@ a3i32 a3clipControllerUpdate(a3_ClipController* clipCtrl, a3f64 dt)
 //****TO-DO-ANIM-PROJECT-1: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
+		// start with keyframe, resolving the total clip time
+		// 1. increment time
+		clipCtrl->clipTime_sec += dt;
 
+		// 2. resolve current keyframe
+		//		a. paused: dt = 0
+		//		b. forward: dt > 0
+		//			i. stop
+		//			ii. step(s) taken
+		//			iii. clip exited
+		//		c. reverse
+		//			i. stop
+		//			ii. step(s) taken
+		//			iii. clip exited
+		// 3. recompute param (keyframe time)
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-1
