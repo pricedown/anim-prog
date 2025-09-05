@@ -57,18 +57,27 @@ a3i32 a3clipControllerUpdate(a3_ClipController* clipCtrl, a3f64 dt)
 
 		// 1. increment time
 		if (dt == 0)
-			return;
+			return 0;
 
 		clipCtrl->clipTime_sec += dt;
+
 		// 2. resolve current keyframe
+		while (true) 
+		{
+			a3boolean isControllerBehindKeyframe = clipCtrl->clipTime_sec >= clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex1].time_sec;
+			a3boolean isControllerAheadKeyframe = clipCtrl->clipTime_sec < clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex0].time_sec;
+			if (!isControllerAheadKeyframe && !isControllerBehindKeyframe)
+				break;
 
-		a3boolean isControllerBehindKeyframe;
-		a3boolean isControllerAheadKeyframe;
-		do {
-			isControllerBehindKeyframe = clipCtrl->clipTime_sec >= clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex1].time_sec;
-			isControllerAheadKeyframe = clipCtrl->clipTime_sec < clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex0].time_sec;
-
-			if (isControllerBehindKeyframe) {
+			if (isControllerBehindKeyframe) 
+			{
+				//if (clipCtrl->keyframeIndex == clipCtrl->clipPool->keyframeCount - 2) 
+				//{
+				//	clipCtrl->keyframeIndex++;
+				//	clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
+				//	clipCtrl->clipPool->keyframe->sampleIndex1 = clipCtrl->clipPool->keyframe->sampleIndex0;
+				//	continue;
+				//}
 				if (clipCtrl->keyframeIndex == clipCtrl->clipPool->keyframeCount - 1)
 				{
 					// terminated at the end of the clip
@@ -77,12 +86,12 @@ a3i32 a3clipControllerUpdate(a3_ClipController* clipCtrl, a3f64 dt)
 					clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
 					continue; // return to catch up if behind
 				}
-				else 
-					clipCtrl->keyframeIndex++;
 
+				clipCtrl->keyframeIndex++;
 				clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
 			}
-			else if (isControllerAheadKeyframe) {
+			else if (isControllerAheadKeyframe) 
+			{
 				if (clipCtrl->keyframeIndex == 0)
 				{
 					// terminated at the beginning of the clip
@@ -91,30 +100,15 @@ a3i32 a3clipControllerUpdate(a3_ClipController* clipCtrl, a3f64 dt)
 					clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
 					continue; // return to catch up if ahead
 				}
-				else
-					clipCtrl->keyframeIndex--;
 
+				clipCtrl->keyframeIndex--;
 				clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
 			}
+		}
 
-			isControllerBehindKeyframe = clipCtrl->clipTime_sec >= clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex1].time_sec;
-			isControllerAheadKeyframe = clipCtrl->clipTime_sec < clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex0].time_sec;
-		} while (isControllerBehindKeyframe || isControllerAheadKeyframe);
-
-
-		//		a. paused: dt = 0
-		//		b. forward: dt > 0
-		//			i. stop
-		//			ii. step(s) taken
-		//			iii. clip exited
-		//		c. reverse
-		//			i. stop
-		//			ii. step(s) taken
-		//			iii. clip exited
-		// 3. recompute param (keyframe time)
-		//clipCtrl->keyframeParam = (clipCtrl->clipTime_sec - clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex0].time_sec) * clipCtrl->keyframe->durationInv;
+		clipCtrl->keyframeParam = (clipCtrl->clipTime_sec - clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex0].time_sec) * clipCtrl->keyframe->durationInv;
 		clipCtrl->clipParam = (clipCtrl->clipTime_sec) / (clipCtrl->clip->duration_sec);
-		clipCtrl->keyframeParam = (clipCtrl->clipTime_sec - clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex0].time_sec) / (clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex1].time_sec - clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex0].time_sec);
+		return 0;
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-1
