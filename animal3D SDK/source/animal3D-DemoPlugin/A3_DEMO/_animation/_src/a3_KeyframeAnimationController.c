@@ -59,7 +59,13 @@ a3i32 a3clipControllerUpdate(a3_ClipController* clipCtrl, a3f64 dt)
 		if (dt == 0)
 			return 0;
 
-		clipCtrl->clipTime_sec += dt;
+		if (clipCtrl->playback_reversed) {
+			clipCtrl->clipTime_sec -= dt;
+		}
+		else {
+			clipCtrl->clipTime_sec += dt;
+		}
+
 
 		// 2. resolve current keyframe
 		while (true) 
@@ -80,11 +86,32 @@ a3i32 a3clipControllerUpdate(a3_ClipController* clipCtrl, a3f64 dt)
 				//}
 				if (clipCtrl->keyframeIndex == clipCtrl->clipPool->keyframeCount - 1)
 				{
-					// terminated at the end of the clip
-					clipCtrl->clipTime_sec -= clipCtrl->clip->duration_sec; 
-					clipCtrl->keyframeIndex = 0; 
-					clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
-					continue; // return to catch up if behind
+					switch (clipCtrl->clip->transitionForward->flag) {
+						case a3clip_stopFlag:
+
+							break;
+						case a3clip_playFlag:
+							clipCtrl->clipTime_sec = 0;
+							clipCtrl->keyframeIndex = 0;
+							clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
+							break;
+						case a3clip_reverseFlag:
+							clipCtrl->playback_reversed = -clipCtrl->playback_reversed;
+
+							// account for overstep and find the correct keyframe
+							clipCtrl->clipTime_sec = 2 * clipCtrl->clip->duration_sec - clipCtrl->clipTime_sec;
+							clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
+							continue;
+						case a3clip_overstepFlag: // Keep leftover time after returning to the beginning
+							// terminated at the end of the clip
+							clipCtrl->clipTime_sec -= clipCtrl->clip->duration_sec;
+							clipCtrl->keyframeIndex = 0;
+							clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
+							continue; // return to catch up if behind
+						default:
+							return -1;
+							break;
+					}
 				}
 
 				clipCtrl->keyframeIndex++;

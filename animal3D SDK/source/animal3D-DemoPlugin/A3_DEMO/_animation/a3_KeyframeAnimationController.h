@@ -55,6 +55,8 @@ typedef struct a3_ClipController
 	// clip time, keyframe time and speed in seconds
 	a3f64 clipTime_sec, keyframeTime_sec, playback_sec, playback_stepPerSec, playback_secPerStep;
 
+	a3boolean playback_reversed;
+
 	// clip and keyframe interpolation parameters
 	a3f64 clipParam, keyframeParam;
 
