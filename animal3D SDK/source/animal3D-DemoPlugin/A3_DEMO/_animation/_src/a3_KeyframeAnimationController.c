@@ -66,7 +66,9 @@ a3i32 a3clipControllerUpdate(a3_ClipController* clipCtrl, a3f64 dt)
 			clipCtrl->clipTime_sec += dt;
 		}
 
-		int transitionBehaviorTest = 2;
+		int transitionForward = 2;
+		int transitionReverse = 2;
+		int transitionNum = transitionReverse;
 
 		//a3boolean isControllerPastKeyframeEnd = clipCtrl->clipTime_sec >= clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex1].time_sec;
 		//a3boolean isControllerBehindKeyframeStart = clipCtrl->clipTime_sec < clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex0].time_sec;
@@ -86,12 +88,12 @@ a3i32 a3clipControllerUpdate(a3_ClipController* clipCtrl, a3f64 dt)
 				// last keyframe
 				if (clipCtrl->keyframeIndex == clipCtrl->clipPool->keyframeCount - 1) {
 					// stop
-					if (transitionBehaviorTest == 0) {
+					if (clipCtrl->clip->transitionForward->flag == a3clip_stopFlag) {
 						clipCtrl->clipTime_sec = clipCtrl->clip->duration_sec;
 						break;
 					}
 					// loop
-					else if (transitionBehaviorTest == 1) {
+					else if (clipCtrl->clip->transitionForward->flag == a3clip_playFlag) {
 						clipCtrl->clipTime_sec -= clipCtrl->clip->duration_sec;
 						clipCtrl->keyframeIndex = 0;
 						clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
@@ -99,12 +101,12 @@ a3i32 a3clipControllerUpdate(a3_ClipController* clipCtrl, a3f64 dt)
 						continue; // return to catch up if behind
 					}
 					// ping-pong
-					else if (transitionBehaviorTest == 2) {
-						clipCtrl->playback_reversed = -clipCtrl->playback_reversed;
+					else if (clipCtrl->clip->transitionForward->flag == a3clip_reverseFlag) {
+						clipCtrl->playback_reversed = !clipCtrl->playback_reversed;
 
 						// account for overstep and find the correct keyframe
 						clipCtrl->clipTime_sec = 2 * clipCtrl->clip->duration_sec - clipCtrl->clipTime_sec;
-						clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
+						continue;
 					}
 				}
 
@@ -115,10 +117,29 @@ a3i32 a3clipControllerUpdate(a3_ClipController* clipCtrl, a3f64 dt)
 			{
 				if (clipCtrl->keyframeIndex == 0) 
 				{
-					clipCtrl->clipTime_sec += clipCtrl->clip->duration_sec;
-					clipCtrl->keyframeIndex = clipCtrl->clipPool->keyframeCount - 1;
-					clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
-					continue; // return to catch up if ahead
+					// reminder, two different transitions
+					if (clipCtrl->clip->transitionReverse->flag == a3clip_stopFlag)
+					{
+						clipCtrl->clipTime_sec = 0.0f;
+						break;
+					}
+
+					else if (clipCtrl->clip->transitionReverse->flag == a3clip_playFlag)
+					{
+						clipCtrl->clipTime_sec += clipCtrl->clip->duration_sec;
+						clipCtrl->keyframeIndex = clipCtrl->clipPool->keyframeCount - 1;
+						clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
+						continue; // return to catch up if ahead
+					}
+
+					else if (clipCtrl->clip->transitionReverse->flag == a3clip_reverseFlag)
+					{
+						clipCtrl->playback_reversed = !clipCtrl->playback_reversed;
+
+						// account for overstep and find the correct keyframe
+						clipCtrl->clipTime_sec = -clipCtrl->clipTime_sec;
+						continue;
+					}
 				}
 
 				clipCtrl->keyframeIndex--;
