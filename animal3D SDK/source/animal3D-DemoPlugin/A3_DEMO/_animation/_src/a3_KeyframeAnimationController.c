@@ -49,121 +49,88 @@ a3i32 a3clipControllerInit(a3_ClipController* clipCtrl_out, const a3byte ctrlNam
 // update clip controller
 a3i32 a3clipControllerUpdate(a3_ClipController* clipCtrl, a3f64 dt)
 {
-	//-----------------------------------------------------------------------------
-	//****TO-DO-ANIM-PROJECT-1: IMPLEMENT ME
-	//-----------------------------------------------------------------------------
+	if (clipCtrl && clipCtrl->clipPool)
+	{
+//-----------------------------------------------------------------------------
+//****TO-DO-ANIM-PROJECT-1: IMPLEMENT ME
+//-----------------------------------------------------------------------------
 
-	if (!clipCtrl || !clipCtrl->clipPool) // ensure the clip controller and clip pool exist
-		return -1;
+		// variables
+		a3f64 overstep;
 
-	if (dt == 0)
+		// time step
+		dt *= clipCtrl->playback_sec;
+		clipCtrl->clipTime_sec += dt;
+		clipCtrl->keyframeTime_sec += dt;
+		//dt *= clipCtrl->playback_stepPerSec;
+		//clipCtrl->clipTime_step += (a3i32)dt;
+		//clipCtrl->keyframeTime_step += (a3i32)dt;
+
+		// resolve forward
+		while ((overstep = clipCtrl->keyframeTime_sec - clipCtrl->keyframe->duration_sec) >= 0.0)
+		{
+			// are we passing the forward terminus of the clip
+			if (clipCtrl->keyframeIndex == clipCtrl->clip->keyframeIndex_final)
+			{
+				// handle forward transition
+
+				// default testing behavior: loop with overstep
+				clipCtrl->keyframeIndex = clipCtrl->clip->keyframeIndex_first;
+				clipCtrl->keyframe = clipCtrl->clipPool->keyframe + clipCtrl->keyframeIndex;
+				clipCtrl->keyframeTime_sec = overstep;
+			}
+			// are we simply moving to the next keyframe
+			else
+			{
+				// set keyframe indices
+				clipCtrl->keyframeIndex += clipCtrl->clip->keyframeDirection;
+
+				// set keyframe pointers
+				clipCtrl->keyframe = clipCtrl->clipPool->keyframe + clipCtrl->keyframeIndex;
+
+				// new time is just the overstep
+				clipCtrl->keyframeTime_sec = overstep;
+			}
+		}
+
+		// resolve reverse
+		while ((overstep = clipCtrl->keyframeTime_sec) < 0.0)
+		{
+			// are we passing the reverse terminus of the clip
+			if (clipCtrl->keyframeIndex == clipCtrl->clip->keyframeIndex_first)
+			{
+				// handle reverse transition
+
+				// default testing behavior: loop with overstep
+				clipCtrl->keyframeIndex = clipCtrl->clip->keyframeIndex_final;
+				clipCtrl->keyframe = clipCtrl->clipPool->keyframe + clipCtrl->keyframeIndex;
+				clipCtrl->keyframeTime_sec = overstep + clipCtrl->keyframe->duration_sec;
+			}
+			// are we simply moving to the previous keyframe
+			else
+			{
+				clipCtrl->keyframeIndex -= clipCtrl->clip->keyframeDirection;
+
+				// set keyframe pointers
+				clipCtrl->keyframe = clipCtrl->clipPool->keyframe + clipCtrl->keyframeIndex;
+
+				// new time is overstep (negative) from new duration
+				clipCtrl->keyframeTime_sec = overstep + clipCtrl->keyframe->duration_sec;
+			}
+		}
+
+		// normalize
+		clipCtrl->keyframeParam = clipCtrl->keyframeTime_sec * clipCtrl->keyframe->durationInv;
+		clipCtrl->clipParam = clipCtrl->clipTime_sec * clipCtrl->clip->durationInv;
+
+		// done
 		return 1;
 
-	// Increment time based on whether or not we are reversed
-	if (clipCtrl->playback_reversed)
-		clipCtrl->clipTime_sec -= dt;
-	else
-		clipCtrl->clipTime_sec += dt;
-
-
-	// Resolve keyframe (and clip if transitioned)
-	while (true)
-	{
-		// Continue if the controller's keyframe is ahead or behind the keyframe that it's supposed to be at
-		a3boolean isControllerBehind = clipCtrl->clipTime_sec >= clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex1].time_sec;
-		a3boolean isControllerAhead = clipCtrl->clipTime_sec < clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex0].time_sec;
-		if (!isControllerAhead && !isControllerBehind)
-			break;
-
-		if (isControllerBehind)
-		{
-			// Step forward to catch up
-
-			if (clipCtrl->keyframeIndex == clipCtrl->clipPool->keyframeCount - 1)
-			{
-				// Passed the final keyframe, forward transition!
-
-				if (clipCtrl->clip->transitionForward->flag == a3clip_stopFlag)
-				{
-					// Stop
-					clipCtrl->clipTime_sec = clipCtrl->clip->duration_sec;
-					break;
-				}
-
-				else if (clipCtrl->clip->transitionForward->flag == a3clip_playFlag)
-				{
-					// Play (loop)
-					clipCtrl->clipTime_sec -= clipCtrl->clip->duration_sec;
-					clipCtrl->keyframeIndex = 0;
-					clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
-					continue; // Continue to further resolve 
-				}
-				else if (clipCtrl->clip->transitionForward->flag == a3clip_reverseFlag)
-				{
-					// Reverse (Ping-Pong)
-					clipCtrl->playback_reversed = !clipCtrl->playback_reversed;
-					clipCtrl->clipTime_sec = 2 * clipCtrl->clip->duration_sec - clipCtrl->clipTime_sec; // Account for overstep and find the correct keyframe
-					continue; // Continue to further resolve 
-				}
-			}
-
-			// Increment the keyframe
-			clipCtrl->keyframeIndex++;
-			clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
-		}
-
-		else if (isControllerAhead)
-		{
-			// Step backward to catch up
-
-			if (clipCtrl->keyframeIndex == 0)
-			{
-				// Passed behind the first keyframe, reverse transition!
-
-				if (clipCtrl->clip->transitionReverse->flag == a3clip_stopFlag)
-				{
-					// Stop
-					clipCtrl->clipTime_sec = 0.0f;
-					break;
-				}
-
-				else if (clipCtrl->clip->transitionReverse->flag == a3clip_playFlag)
-				{
-					// Play (loop)
-					clipCtrl->clipTime_sec += clipCtrl->clip->duration_sec;
-					clipCtrl->keyframeIndex = clipCtrl->clipPool->keyframeCount - 1;
-					clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
-					continue; // Continue to further resolve 
-				}
-
-				else if (clipCtrl->clip->transitionReverse->flag == a3clip_reverseFlag)
-				{
-					// Reverse (Ping-Pong)
-					clipCtrl->playback_reversed = !clipCtrl->playback_reversed;
-					clipCtrl->clipTime_sec = -clipCtrl->clipTime_sec; // Account for overstep and find the correct keyframe
-					continue; // Continue to further resolve 
-				}
-			}
-
-			// Decrement the keyframe
-			clipCtrl->keyframeIndex--;
-			clipCtrl->keyframe = &clipCtrl->clipPool->keyframe[clipCtrl->keyframeIndex];
-		}
+//-----------------------------------------------------------------------------
+//****END-TO-DO-PROJECT-1
+//-----------------------------------------------------------------------------
 	}
-
-
-	// Calculate time since beginning of keyframe (keyframeTime)
-	clipCtrl->keyframeTime_sec = (clipCtrl->clipTime_sec - clipCtrl->clipPool->sample[clipCtrl->keyframe->sampleIndex0].time_sec);
-	// Calculate normalized position of controller within keyframe (keyframeParam)
-	clipCtrl->keyframeParam = clipCtrl->keyframeTime_sec * clipCtrl->keyframe->durationInv;
-	// Calculate normalized position of controller within clip (clipParam)
-	clipCtrl->clipParam = (clipCtrl->clipTime_sec) / (clipCtrl->clip->duration_sec);
-
-	return 1;
-
-	//-----------------------------------------------------------------------------
-	//****END-TO-DO-PROJECT-1
-	//-----------------------------------------------------------------------------
+	return -1;
 }
 
 
