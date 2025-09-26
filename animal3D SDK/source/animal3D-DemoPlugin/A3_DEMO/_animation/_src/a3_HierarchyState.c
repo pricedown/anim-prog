@@ -113,7 +113,8 @@ a3i32 a3hierarchyPoseGroupLoadBinary(a3_HierarchyPoseGroup* poseGroup, a3_FileSt
 //****TO-DO-ANIM-OPTIONAL: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 				
-
+				// fread
+				// -> create
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-OPTIONAL
@@ -141,7 +142,10 @@ a3i32 a3hierarchyPoseGroupSaveBinary(a3_HierarchyPoseGroup const* poseGroup, a3_
 //****TO-DO-ANIM-OPTIONAL: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 				
-
+				// dumping this to a file. whatever you do to write, your gonna have to do the same thing to read in the same order
+				//fwrite
+				//	-> 
+				// optional
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-OPTIONAL
@@ -272,7 +276,11 @@ a3i32 a3hierarchyStateUpdateObjectBindToCurrent(const a3_HierarchyState* state, 
 //****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 		
-
+		for (int i = 0; i < state->hierarchy->numNodes; ++i) {
+			a3real4x4Product(state->objectSpaceBindToCurrent->hpose_base[i].transformMat.m,
+				state->objectSpace->hpose_base[i].transformMat.m,
+				state_bind->objectSpaceInv->hpose_base[i].transformMat.m);
+		}
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-2

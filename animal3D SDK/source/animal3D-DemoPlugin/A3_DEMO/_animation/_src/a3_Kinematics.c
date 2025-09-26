@@ -168,6 +168,24 @@ void a3kinematicsUpdateHierarchyStateFK(a3_HierarchyState* activeHS,
 //****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
+		// (Author statement): BLATANTLY PLAGARISED DIRECTLY FROM DANIEL S. BUCKSTEIN
+		// for every joint in the hierarchy
+		a3hierarchyPoseConcat(
+			activeHS->localSpace,	// Goal: local pose = total of base and delta
+			activeHS->animPose,		// delta pose (from clip controller interpolate)
+			baseHS->localSpace,		// precomputed base pose
+			activeHS->hierarchy->numNodes 
+		);
+		// we now have the animation pose from this concatonate pose. we have a description of the pose, now e need to convert it
+		a3hierarchyPoseConvert(
+			activeHS->localSpace->hpose_base,	// goal: convert local pose description to matrix
+			activeHS->hierarchy->numNodes,		
+			poseGroup->channel,
+			poseGroup->order
+		);
+		a3kinematicsSolveForward(activeHS); // finally, do FK algoritm
+
+
 		// expanded pipeline (we've only done ne piece before)
 
 //-----------------------------------------------------------------------------
@@ -211,7 +229,9 @@ void a3kinematicsUpdateHierarchyStateSkin(a3_HierarchyState* activeHS,
 //****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
-
+		a3hierarchyStateUpdateLocalInverse(activeHS);
+		a3hierarchyStateUpdateObjectInverse(activeHS);
+		a3hierarchyStateUpdateObjectBindToCurrent(activeHS, baseHS);
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-2
