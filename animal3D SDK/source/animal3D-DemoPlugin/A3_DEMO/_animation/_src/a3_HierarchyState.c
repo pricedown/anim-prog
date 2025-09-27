@@ -233,7 +233,7 @@ a3i32 a3hierarchyStateUpdateLocalInverse(const a3_HierarchyState* state)
 //****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 		
-
+		
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-2
@@ -250,7 +250,7 @@ a3i32 a3hierarchyStateUpdateObjectInverse(const a3_HierarchyState* state)
 	{
 		a3index i = 0;
 //-----------------------------------------------------------------------------
-//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
+//****TO-DO-ANIM-PROJECT-2:
 //-----------------------------------------------------------------------------
 		
 		for (i = 0; i < state->hierarchy->numNodes; ++i)
@@ -276,7 +276,8 @@ a3i32 a3hierarchyStateUpdateObjectBindToCurrent(const a3_HierarchyState* state, 
 //****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 		
-		for (int i = 0; i < state->hierarchy->numNodes; ++i) {
+		for (a3ui32 i = 0; i < state->hierarchy->numNodes; ++i)
+		{
 			a3real4x4Product(state->objectSpaceBindToCurrent->hpose_base[i].transformMat.m,
 				state->objectSpace->hpose_base[i].transformMat.m,
 				state_bind->objectSpaceInv->hpose_base[i].transformMat.m);
@@ -293,21 +294,155 @@ a3i32 a3hierarchyStateUpdateObjectBindToCurrent(const a3_HierarchyState* state, 
 
 //-----------------------------------------------------------------------------
 
+//typedef struct NODE {
+//	char* name;
+//	float length;
+//	float offset[3];
+//	float euler[3];
+//	float colour[3];
+//	int noofchildren;
+//	NODE** children;
+//	NODE* parent;
+//	float** froset;
+//	float** freuler;
+//	float* scale;
+//	//BYTE DOFs;
+//	//OBJECTINFO* object;
+//	//CONSTRAINT* constraints;
+//} NODE;
+//
+//typedef struct MOCAPHEADER {
+//	int noofsegments;
+//	long noofframes;
+//	int datarate;
+//	int euler[3][3];
+//	float callib;
+//	a3boolean degrees;
+//	float scalefactor;
+//	long currentframe;
+//	float floor;
+//} MOCAPHEADER;
+//
+//struct MOCAPSEGMENT {
+//	char* name;
+//	NODE* root;
+//	MOCAPHEADER* header;
+//	NODE** nodelist;
+//} MOCAPSEGMENT;
+
+
 // THIS IS THE BIG function, way bigger
 // load HTR file, read and store complete pose group and hierarchy
 a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hierarchy* hierarchy_out, const a3byte* resourceFilePath)
 {
 	if (poseGroup_out && !poseGroup_out->hierarchy && hierarchy_out && !hierarchy_out->nodes && resourceFilePath && *resourceFilePath)
 	{
-//-----------------------------------------------------------------------------
-//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
-//-----------------------------------------------------------------------------
-		
+		//-----------------------------------------------------------------------------
+		//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
+		//-----------------------------------------------------------------------------
+/*
+		int read, i, j, where;
+		int pos[8];	// Used to determine the position of the next char to write
+		char line[8][40];	// Used to store the attribute and the corresponding value
+		char buffer[4097];
+		int section = 0;	// Indicates which section is currently being processed
+		NODE* tnode;
+		float** base, ** rot, ** arot, ** trot;
+		float ang[3], num, den;
+		a3boolean eof = false;
+
+		FILE* file = fopen(resourceFilePath, "rb");
+		if (!file)
+			return 1;
+
+		// Process header section
+		read = fread(buffer, 1, 4096, file);
+		buffer[read] = '\0';
+		i = strstrEx(buffer, "[HEADER]");
+		i += strstrEx(buffer + i, (char)10);
+		while (buffer[++i] < 32);
+		where = pos[0] = pos[1] = pos[2] = pos[3] = pos[4] = pos[5] = pos[6] = pos[7] = 0;
+		// Process each line in the header
+		while (read && !eof)
+		{
+			while (i < read && !eof)
+			{
+				if (buffer[i] == '#' || buffer[i] == (char)10)
+				{
+					// Process line
+					line[1][pos[1]] = line[0][pos[0]] = '\0';
+					if (line[0][0] == '[')
+					{
+						if (++section == 2)
+						{
+							// Body structure has been read and ready to process the base positions
+							// So assign the GLOBAL node to the root pointer
+							//root = 0;
+							for (int j = 0; j < currentnode && !root ++j)
+							{
+
+							}
+						}
+					}
+				}
+			}
+		}
+		*/
+
+		FILE* fp;
+		char word[256];
+
+		fp = fopen(resourceFilePath, "r");
+
+		if (fp == NULL) 
+		{
+			perror("Error opening file");
+			return 1;
+		}
 
 
-//-----------------------------------------------------------------------------
-//****END-TO-DO-PROJECT-2
-//-----------------------------------------------------------------------------
+		enum HTRBlock {
+			Header,
+			SegmentNameAndHierarchy,
+			BasePosition,
+			Poses,
+		};
+
+		enum HTRBlock currentBlock = Header;
+		while (fscanf(fp, "%s", word) == 1) {
+
+			if (word[0] == '[')
+			{
+				// Identify the new block we're entering
+				if (word == "[Header]")
+					currentBlock = Header;
+				else if (word == "[SegmentNames&Hierarchy]")
+					currentBlock = SegmentNameAndHierarchy;
+				else if (word == "[BasePosition]")
+					currentBlock = BasePosition;
+				else if (currentBlock == BasePosition)
+					currentBlock = Poses;
+				else 
+					printf("Unknown parsed block name: %s", word);
+
+				continue;
+			}
+
+			switch (currentBlock) {
+			case Header:
+				break;
+			case SegmentNameAndHierarchy:
+				break;
+			}
+		}
+
+		fclose(fp);
+
+		poseGroup_out->hierarchy = hierarchy_out;
+
+		//-----------------------------------------------------------------------------
+		//****END-TO-DO-PROJECT-2
+		//-----------------------------------------------------------------------------
 	}
 	return -1;
 }
@@ -317,15 +452,15 @@ a3i32 a3hierarchyPoseGroupLoadBVH(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 {
 	if (poseGroup_out && !poseGroup_out->hierarchy && hierarchy_out && !hierarchy_out->nodes && resourceFilePath && *resourceFilePath)
 	{
-//-----------------------------------------------------------------------------
-//****TO-DO-ANIM-OPTIONAL: IMPLEMENT ME
-//-----------------------------------------------------------------------------
+		//-----------------------------------------------------------------------------
+		//****TO-DO-ANIM-OPTIONAL: IMPLEMENT ME
+		//-----------------------------------------------------------------------------
 
 
 
-//-----------------------------------------------------------------------------
-//****END-TO-DO-OPTIONAL
-//-----------------------------------------------------------------------------
+		//-----------------------------------------------------------------------------
+		//****END-TO-DO-OPTIONAL
+		//-----------------------------------------------------------------------------
 	}
 	return -1;
 }
@@ -335,15 +470,15 @@ a3i32 a3hierarchyPoseGroupSaveHTR(const a3_HierarchyPoseGroup* poseGroup_in, con
 {
 	if (poseGroup_in && poseGroup_in->hierarchy && hierarchy_in && hierarchy_in->nodes && resourceFilePath && *resourceFilePath)
 	{
-//-----------------------------------------------------------------------------
-//****TO-DO-ANIM-OPTIONAL: IMPLEMENT ME
-//-----------------------------------------------------------------------------
+		//-----------------------------------------------------------------------------
+		//****TO-DO-ANIM-OPTIONAL: IMPLEMENT ME
+		//-----------------------------------------------------------------------------
 
 
 
-//-----------------------------------------------------------------------------
-//****END-TO-DO-OPTIONAL
-//-----------------------------------------------------------------------------
+		//-----------------------------------------------------------------------------
+		//****END-TO-DO-OPTIONAL
+		//-----------------------------------------------------------------------------
 	}
 	return -1;
 }
@@ -353,15 +488,15 @@ a3i32 a3hierarchyPoseGroupSaveBVH(const a3_HierarchyPoseGroup* poseGroup_in, con
 {
 	if (poseGroup_in && poseGroup_in->hierarchy && hierarchy_in && hierarchy_in->nodes && resourceFilePath && *resourceFilePath)
 	{
-//-----------------------------------------------------------------------------
-//****TO-DO-ANIM-OPTIONAL: IMPLEMENT ME
-//-----------------------------------------------------------------------------
+		//-----------------------------------------------------------------------------
+		//****TO-DO-ANIM-OPTIONAL: IMPLEMENT ME
+		//-----------------------------------------------------------------------------
 
 
 
-//-----------------------------------------------------------------------------
-//****END-TO-DO-OPTIONAL
-//-----------------------------------------------------------------------------
+		//-----------------------------------------------------------------------------
+		//****END-TO-DO-OPTIONAL
+		//-----------------------------------------------------------------------------
 	}
 	return -1;
 }

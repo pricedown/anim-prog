@@ -31,7 +31,7 @@
 static inline void a3kinematicsSolveForwardSingle(const a3_HierarchyState* hierarchyState, const a3ui32 index, const a3ui32 parentIndex)
 {
 //-----------------------------------------------------------------------------
-//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
+//****TO-DO-ANIM-PROJECT-2:
 //-----------------------------------------------------------------------------
 
 	a3real4x4Product(hierarchyState->objectSpace->hpose_base[index].transformMat.m, 
@@ -45,7 +45,7 @@ static inline void a3kinematicsSolveForwardSingle(const a3_HierarchyState* hiera
 static inline void a3kinematicsSolveForwardRoot(const a3_HierarchyState* hierarchyState, const a3ui32 index)
 {
 //-----------------------------------------------------------------------------
-//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
+//****TO-DO-ANIM-PROJECT-2:
 //-----------------------------------------------------------------------------
 
 	hierarchyState->objectSpace->hpose_base[index].transformMat 
@@ -69,7 +69,7 @@ a3i32 a3kinematicsSolveForwardPartial(const a3_HierarchyState* hierarchyState, c
 		//		- else
 		//			- copy local matrix to object matrix
 //-----------------------------------------------------------------------------
-//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
+//****TO-DO-ANIM-PROJECT-2:
 //-----------------------------------------------------------------------------
 
 		a3ui32 i;
@@ -165,7 +165,7 @@ void a3kinematicsUpdateHierarchyStateFK(a3_HierarchyState* activeHS,
 		//	-> convert poses to local-space matrices
 		//	-> perform recursive FK
 //-----------------------------------------------------------------------------
-//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
+//****TO-DO-ANIM-PROJECT-2:
 //-----------------------------------------------------------------------------
 
 		// (Author statement): BLATANTLY PLAGARISED DIRECTLY FROM DANIEL S. BUCKSTEIN
@@ -178,7 +178,7 @@ void a3kinematicsUpdateHierarchyStateFK(a3_HierarchyState* activeHS,
 		);
 		// we now have the animation pose from this concatonate pose. we have a description of the pose, now e need to convert it
 		a3hierarchyPoseConvert(
-			activeHS->localSpace->hpose_base,	// goal: convert local pose description to matrix
+			activeHS->localSpace,	// goal: convert local pose description to matrix
 			activeHS->hierarchy->numNodes,		
 			poseGroup->channel,
 			poseGroup->order
@@ -226,7 +226,7 @@ void a3kinematicsUpdateHierarchyStateSkin(a3_HierarchyState* activeHS,
 		//	-> update object-space inverse matrices
 		//	-> update transform from base to current
 //-----------------------------------------------------------------------------
-//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
+//****TO-DO-ANIM-PROJECT-2:
 //-----------------------------------------------------------------------------
 
 		a3hierarchyStateUpdateLocalInverse(activeHS);
