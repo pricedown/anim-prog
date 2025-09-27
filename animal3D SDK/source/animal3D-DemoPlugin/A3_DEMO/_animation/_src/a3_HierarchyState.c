@@ -334,7 +334,6 @@ a3i32 a3hierarchyStateUpdateObjectBindToCurrent(const a3_HierarchyState* state, 
 //	NODE** nodelist;
 //} MOCAPSEGMENT;
 
-
 // THIS IS THE BIG function, way bigger
 // load HTR file, read and store complete pose group and hierarchy
 a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hierarchy* hierarchy_out, const a3byte* resourceFilePath)
@@ -404,39 +403,136 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 			return 1;
 		}
 
-
 		enum HTRBlock {
 			Header,
 			SegmentNameAndHierarchy,
 			BasePosition,
 			Poses,
 		};
+		
+		enum HeaderPositions {
+			FileType = 0,
+			DataType,
+			FileVersion,
+			NumSegments,
+			NumFrames,
+			DataFrameRate,
+			EulerRotationOrder,
+			CalibrationUnits,
+			RotationUnits,
+			GlobalAxisofGravity,
+			BoneLengthAxis,
+			ScaleFactor,
+		};
+
+		int numSegments;
+		int numFrames;
+		int dataFrameRate;
+		float calibrationUnitsScale;
+		a3boolean rotationUsesDegrees;
+		char globalAxisOfGravity;
+		char boneLengthAxis;
+		float scaleFactor;
 
 		enum HTRBlock currentBlock = Header;
-		while (fscanf(fp, "%s", word) == 1) {
 
-			if (word[0] == '[')
-			{
-				// Identify the new block we're entering
-				if (word == "[Header]")
-					currentBlock = Header;
-				else if (word == "[SegmentNames&Hierarchy]")
-					currentBlock = SegmentNameAndHierarchy;
-				else if (word == "[BasePosition]")
-					currentBlock = BasePosition;
-				else if (currentBlock == BasePosition)
-					currentBlock = Poses;
-				else 
-					printf("Unknown parsed block name: %s", word);
 
+		char line[512];
+		int lineNumber = 0;
+
+		while (fgets(line, 512, fp) != NULL) {
+			// Iterate the lines
+			lineNumber++;
+			char* word;
+
+			word = strtok(line, " \n");
+			int blockWordNumber = -1;
+
+			if (word[0] == "#")
 				continue;
-			}
 
-			switch (currentBlock) {
-			case Header:
-				break;
-			case SegmentNameAndHierarchy:
-				break;
+			while (word != NULL) {
+				// Iterate the words
+				blockWordNumber++;
+
+				if (word[0] == '[')
+				{
+					// Enter new block
+					if (word == "[Header]")
+						currentBlock = Header;
+					else if (word == "[SegmentNames&Hierarchy]")
+						currentBlock = SegmentNameAndHierarchy;
+					else if (word == "[BasePosition]")
+						currentBlock = BasePosition;
+					else if (currentBlock == BasePosition)
+						currentBlock = Poses;
+					else if (currentBlock == Poses)
+					{
+						// TODO:
+						// Set to enter info for pose of [word]
+					}
+					else
+					{
+						printf("Unknown parsed block name: %s", word);
+						blockWordNumber = -1;
+						continue;
+					}
+
+					blockWordNumber = -1;
+					continue;
+				}
+
+				switch (currentBlock) {
+				case Header:
+					switch (blockWordNumber / 2)
+					{
+					case FileType:
+						break;
+					case DataType:
+						break;
+					case FileVersion:
+						break;
+					case NumSegments:
+						break;
+					case NumFrames:
+						break;
+					case DataFrameRate:
+						break;
+					case EulerRotationOrder:
+						if (word == "XYZ")
+							poseGroup_out->order = a3poseEulerOrder_xyz;
+						else if (word == "YZX")
+							poseGroup_out->order = a3poseEulerOrder_yzx;
+						else if (word == "ZXY")
+							poseGroup_out->order = a3poseEulerOrder_zxy;
+						else if (word == "YXZ")
+							poseGroup_out->order = a3poseEulerOrder_yxz;
+						else if (word == "XZY")
+							poseGroup_out->order = a3poseEulerOrder_xzy;
+						else if (word == "ZYX")
+							poseGroup_out->order = a3poseEulerOrder_zyx;
+						break;
+					case CalibrationUnits:
+						break;
+					case RotationUnits:
+						break;
+					case GlobalAxisofGravity:
+						break;
+					case BoneLengthAxis:
+						break;
+					case ScaleFactor:
+						break;
+					}
+					break;
+
+				case SegmentNameAndHierarchy:
+
+					break;
+				case BasePosition:
+					break;
+				case Poses:
+					break;
+				}
 			}
 		}
 
