@@ -39,8 +39,15 @@ a3i32 a3spatialPoseConvert(a3_SpatialPose* spatialPose, const a3_SpatialPoseChan
 		// this is a large function :(
 		// go thru each channel, see if its used, and convert
 
-		// YOU WANT TO DO THIS PROPERLY
+		// YOU WANT TO DO THIS PROPERLY ok i will
 		// -> form a single matrix for each channel
+		
+		// mat4 pos
+		// mat4 rot
+		// mat4 scale
+
+		// t + R * S * v
+
 		// -> concat (matrix mul) them in the correct order  
 		//		-> v' = t + R * S * v (right to left)
 		// this operation is represented as a 4x4 matrix

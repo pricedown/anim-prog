@@ -193,10 +193,10 @@ void a3animation_update_sceneGraph(a3_Scene_Animation* scene, a3f64 const dt)
 //-----------------------------------------------------------------------------
 	//for (i = 0; i < animationMaxCount_sceneObject; ++i)
 	//{
-	//	//****HINT: consider this for one part of the core FK function - what does this do?
+		//****HINT: consider this for one part of the core FK function - what does this do?
 	//	scene->sceneGraphState->objectSpace->hpose_base[i].transformMat = scene->sceneGraphState->localSpace->hpose_base[i].transformMat;
 
-	//	//****HINT: consider this for updating object-space inverses
+		//****HINT: consider this for updating object-space inverses
 	//	a3real4x4TransformInverse(
 	//		scene->sceneGraphState->objectSpaceInv->hpose_base[i].transformMat.m,
 	//		scene->sceneGraphState->objectSpace->hpose_base[i].transformMat.m);
