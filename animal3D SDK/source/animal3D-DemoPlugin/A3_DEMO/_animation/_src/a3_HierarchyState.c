@@ -392,13 +392,6 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 		}
 		*/
 
-		FILE* fp;
-		fp = fopen(resourceFilePath, "r");
-		if (fp == NULL) 
-		{
-			perror("Error opening file");
-			return 1;
-		}
 
 		enum HTRBlock {
 			Header,
@@ -431,17 +424,33 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 		//char boneLengthAxis;
 		//float scaleFactor;
 
-		enum HTRBlock currentBlock = Header;
+		char segmentNames[256][64];
+		int segmentCount = 0;
+		int numFrames = 0;
+		int numSegments = 0;
+		int parsedPoseCount = 0; // for checking
 
+		int currentPoseSegmentIndex = -1;
+		int currentFrameIndex = 0;
 
-		char line[512];
+		printf("----------------- HTR LOADING STARTED  ---------------\n");
+
+		FILE* fp;
+		fp = fopen(resourceFilePath, "r");
+		if (fp == NULL)
+		{
+			perror("Error opening file");
+			return 1;
+		}
+
 		int lineNumber = 0;
+		char line[512];
+
+		enum HTRBlock currentBlock = Header;
+		int blockWordNumber = 0;
 
 		while (fgets(line, 512, fp) != NULL) {
 			// Iterate the lines
-			lineNumber++;
-
-
 
 			if (line[0] == '\n' || line[0] == '#')
 			{
@@ -450,7 +459,6 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 				continue;
 			}
 
-			int blockWordNumber = 0;
 			char* word = strtok(line, " \t\n\r");
 
 			while (word != NULL) {
@@ -461,28 +469,27 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					// Enter new block
 					if (strcmp(word, "[Header]") == 0)
 						currentBlock = Header;
-					if (strcmp(word, "[Header]") == 0)
-						currentBlock = Header;
 					else if (strcmp(word, "[SegmentNames&Hierarchy]") == 0)
+					{
+
 						currentBlock = SegmentNameAndHierarchy;
+
+						// Allocate based on header info
+						if (poseGroup_out->pose == NULL && numSegments > 0 && numFrames > 0)
+							poseGroup_out->pose = calloc(numSegments * numFrames, sizeof(a3_SpatialPose));
+					}
 					else if (strcmp(word, "[BasePosition]") == 0)
 						currentBlock = BasePosition;
-					else if (currentBlock == BasePosition)
-						currentBlock = Poses;
-					else if (currentBlock == Poses)
+					else
 					{
+						currentBlock = Poses;
 						// TODO:
 						// Set to enter info for pose of [word]
 					}
-					else
-					{
-						printf("Unknown parsed block name: %s", word);
-						blockWordNumber = -1;
-					}
 
 					blockWordNumber = -1;
-				} 
-				else 
+				}
+				else
 				{
 
 					switch (currentBlock) {
@@ -495,24 +502,43 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 							break;
 						case FileVersion:
 							break;
-						case NumSegments:
+						case NumSegments: {
+							// Number of body parts / joints
+							int wordInt = (int)strtol(word, NULL, 10);
+							numSegments = wordInt;
+							//poseGroup_out->hposeCount = wordInt; // causing crash
+
+							printf("NumSegments = %d\n", numSegments);
 							break;
+						}
 						case NumFrames:
+						{
+							// Number of frames across all animations
+							int wordInt = (int)strtol(word, NULL, 10);
+							numFrames = wordInt;
+							//poseGroup_out->poseCount = numFrames * numSegments; // causing crash
+
+							printf("NumFrames = %d\n", numFrames);
 							break;
+						}
 						case DataFrameRate:
 							break;
 						case EulerRotationOrder:
-							if (word == "XYZ")
+
+							if (poseGroup_out->order == NULL)
+								poseGroup_out->order = malloc(sizeof(a3_SpatialPoseEulerOrder));
+
+							if (strcmp(word, "XYZ") == 0)
 								poseGroup_out->order[0] = a3poseEulerOrder_xyz;
-							else if (word == "YZX")
+							else if (strcmp(word, "YZX") == 0)
 								poseGroup_out->order[0] = a3poseEulerOrder_yzx;
-							else if (word == "ZXY")
+							else if (strcmp(word, "ZXY") == 0)
 								poseGroup_out->order[0] = a3poseEulerOrder_zxy;
-							else if (word == "YXZ")
+							else if (strcmp(word, "YXZ") == 0)
 								poseGroup_out->order[0] = a3poseEulerOrder_yxz;
-							else if (word == "XZY")
+							else if (strcmp(word, "XZY") == 0)
 								poseGroup_out->order[0] = a3poseEulerOrder_xzy;
-							else if (word == "ZYX")
+							else if (strcmp(word, "ZYX") == 0)
 								poseGroup_out->order[0] = a3poseEulerOrder_zyx;
 							break;
 						case CalibrationUnits:
@@ -523,29 +549,64 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 							break;
 						case BoneLengthAxis:
 							break;
-						case ScaleFactor:
+						case ScaleFactor: {
+							float wordFloat = strtof(word, NULL);
+							// TODO: use scale factor
 							break;
+						}
 						}
 						break;
 
 					case SegmentNameAndHierarchy:
+					{
+						char* segName = word;
+						char* parentName = strtok(NULL, " \t\n\r");
 
+						if (parentName == NULL) {
+							printf("Missing parent for segment: %s\n", segName);
+							return 1;
+						}
+
+						if (segmentCount >= 256) {
+							printf("Too many segments! Array must be resized to support %d\n", segmentCount);
+							return 1;
+						}
+
+						strcpy(segmentNames[segmentCount], segName);
+
+						// TODO: track parents / hierarchy 
+
+						segmentCount++;
+
+						word = strtok(NULL, " \t\n\r");
+						blockWordNumber++;
+						continue;
 						break;
-					case BasePosition:
+					}
+					case BasePosition: {
+						// TODO: Parse base poses
 						break;
+					}
 					case Poses:
+					{
+						// TODO: parse poses
 						break;
+					}
 					}
 
 				}
 				word = strtok(NULL, " \t\n\r");
 				blockWordNumber++;
 			}
+			lineNumber++;
 		}
-
 		fclose(fp);
-
 		poseGroup_out->hierarchy = hierarchy_out;
+
+		printf("HTR loading completed!\n\n");
+		printf("Parsed (real) segment count: %d\n", segmentCount);
+		printf("Parsed (real) pose count: %d\n", parsedPoseCount);
+		printf("----------------- HTR LOADING FINISHED ---------------\n");
 
 		//-----------------------------------------------------------------------------
 		//****END-TO-DO-PROJECT-2
