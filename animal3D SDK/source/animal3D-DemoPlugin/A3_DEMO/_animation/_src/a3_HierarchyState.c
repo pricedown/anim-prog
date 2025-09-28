@@ -415,8 +415,6 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 			ScaleFactor,
 		};
 
-		//int numSegments;
-		//int numFrames;
 		//int dataFrameRate;
 		//float calibrationUnitsScale;
 		//a3boolean rotationUsesDegrees;
@@ -451,6 +449,8 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 
 		while (fgets(line, 512, fp) != NULL) {
 			// Iterate the lines
+			char originalLine[512];
+			strcpy(originalLine, line);
 
 			if (line[0] == '\n' || line[0] == '#')
 			{
@@ -461,139 +461,231 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 
 			char* word = strtok(line, " \t\n\r");
 
+			if (word == NULL)
+				continue;
+
+			if (word[0] == '[') {
+				// Enter new block
+				if (strcmp(word, "[Header]") == 0)
+					currentBlock = Header;
+				else if (strcmp(word, "[SegmentNames&Hierarchy]") == 0) {
+					currentBlock = SegmentNameAndHierarchy;
+
+					if (poseGroup_out->pose == NULL && numSegments > 0 && numFrames > 0)
+						poseGroup_out->pose = calloc(numSegments * numFrames, sizeof(a3_SpatialPose));
+				}
+				else if (strcmp(word, "[BasePosition]") == 0) {
+					currentBlock = BasePosition;
+				}
+				else {
+					// TODO: 
+					// Set to enter info for pose of [word]
+					currentBlock = Poses;
+
+					char segName[64];
+					int len = (int)strlen(word);
+					if (len > 2) {
+						strncpy(segName, word + 1, len - 2);
+						segName[len - 2] = '\0';
+
+						currentPoseSegmentIndex = -1;
+						for (int i = 0; i < segmentCount; i++) {
+							if (strcmp(segmentNames[i], segName) == 0) {
+								currentPoseSegmentIndex = i;
+								break;
+							}
+						}
+
+						if (currentPoseSegmentIndex == -1) {
+							if (strcmp(segName, "EndOfFile") == 0)
+								break;
+							printf("Unknown segment in [Poses] block: %s\n", segName);
+							return 1;
+						}
+						currentFrameIndex = 0;
+					}
+				}
+
+				continue;
+			}
+
+			if (currentBlock == BasePosition) {
+				char segName[64];
+				float tx, ty, tz, rx, ry, rz;
+
+				int parsed = sscanf(originalLine, "%63s %f %f %f %f %f %f",
+					segName, &tx, &ty, &tz, &rx, &ry, &rz);
+				if (parsed != 7) {
+					printf("Failed to parse BasePosition line: %s\n", originalLine);
+					return 1;
+				}
+
+				int idx = -1;
+				for (int i = 0; i < segmentCount; i++) {
+					if (strcmp(segmentNames[i], segName) == 0) {
+						idx = i;
+						break;
+					}
+				}
+				if (idx == -1) {
+					printf("Unknown segment in base pose: %s\n", segName);
+					return 1;
+				}
+
+				poseGroup_out->pose[idx].translate.x = tx;
+				poseGroup_out->pose[idx].translate.y = ty;
+				poseGroup_out->pose[idx].translate.z = tz;
+
+				poseGroup_out->pose[idx].rotate.x = rx;
+				poseGroup_out->pose[idx].rotate.y = ry;
+				poseGroup_out->pose[idx].rotate.z = rz;
+
+				lineNumber++;
+				continue;
+			}
+			else if (currentBlock == Poses && originalLine[0] != '[') {
+				int frameIdx;
+				float tx, ty, tz, rx, ry, rz, scale;
+
+				int parsed = sscanf(originalLine, "%d %f %f %f %f %f %f %f",
+					&frameIdx, &tx, &ty, &tz, &rx, &ry, &rz, &scale);
+
+				if (parsed != 8) {
+					printf("Failed to parse pose line: %s\n", originalLine);
+					lineNumber++;
+					continue;
+				}
+
+				if (currentPoseSegmentIndex < 0) {
+					printf("Error: pose segment not set before poses.\n");
+					return 1;
+				}
+				if (frameIdx < 1 || frameIdx > numFrames) {
+					printf("Warning: frame index %d out of range\n", frameIdx);
+				}
+
+				int poseIdx = (frameIdx - 1) * numSegments + currentPoseSegmentIndex;
+
+				poseGroup_out->pose[poseIdx].translate.x = tx;
+				poseGroup_out->pose[poseIdx].translate.y = ty;
+				poseGroup_out->pose[poseIdx].translate.z = tz;
+
+				poseGroup_out->pose[poseIdx].rotate.x = rx;
+				poseGroup_out->pose[poseIdx].rotate.y = ry;
+				poseGroup_out->pose[poseIdx].rotate.z = rz;
+
+				poseGroup_out->pose[poseIdx].scale.x = scale;
+
+				parsedPoseCount++;
+				lineNumber++;
+				blockWordNumber = 0;
+				continue;
+			}
+
+
 			while (word != NULL) {
 				// Iterate the words
 
-				if (word[0] == '[')
+				switch (currentBlock) {
+				case Header:
+					switch (blockWordNumber / 2)
+					{
+					case FileType:
+						break;
+					case DataType:
+						break;
+					case FileVersion:
+						break;
+					case NumSegments: {
+						// Number of body parts / joints
+						int wordInt = (int)strtol(word, NULL, 10);
+						numSegments = wordInt;
+						//poseGroup_out->hposeCount = wordInt; // causing crash
+
+						printf("NumSegments = %d\n", numSegments);
+						break;
+					}
+					case NumFrames:
+					{
+						// Number of frames across all animations
+						int wordInt = (int)strtol(word, NULL, 10);
+						numFrames = wordInt;
+						//poseGroup_out->poseCount = numFrames * numSegments; // causing crash
+
+						printf("NumFrames = %d\n", numFrames);
+						break;
+					}
+					case DataFrameRate:
+						break;
+					case EulerRotationOrder:
+
+						if (poseGroup_out->order == NULL)
+							poseGroup_out->order = malloc(sizeof(a3_SpatialPoseEulerOrder));
+
+						if (strcmp(word, "XYZ") == 0)
+							poseGroup_out->order[0] = a3poseEulerOrder_xyz;
+						else if (strcmp(word, "YZX") == 0)
+							poseGroup_out->order[0] = a3poseEulerOrder_yzx;
+						else if (strcmp(word, "ZXY") == 0)
+							poseGroup_out->order[0] = a3poseEulerOrder_zxy;
+						else if (strcmp(word, "YXZ") == 0)
+							poseGroup_out->order[0] = a3poseEulerOrder_yxz;
+						else if (strcmp(word, "XZY") == 0)
+							poseGroup_out->order[0] = a3poseEulerOrder_xzy;
+						else if (strcmp(word, "ZYX") == 0)
+							poseGroup_out->order[0] = a3poseEulerOrder_zyx;
+						break;
+					case CalibrationUnits:
+						break;
+					case RotationUnits:
+						break;
+					case GlobalAxisofGravity:
+						break;
+					case BoneLengthAxis:
+						break;
+					case ScaleFactor: {
+						float wordFloat = strtof(word, NULL);
+						// TODO: use scale factor
+						break;
+					}
+					}
+					break;
+
+				case SegmentNameAndHierarchy:
 				{
-					// Enter new block
-					if (strcmp(word, "[Header]") == 0)
-						currentBlock = Header;
-					else if (strcmp(word, "[SegmentNames&Hierarchy]") == 0)
-					{
+					char* segName = word;
+					char* parentName = strtok(NULL, " \t\n\r");
 
-						currentBlock = SegmentNameAndHierarchy;
-
-						// Allocate based on header info
-						if (poseGroup_out->pose == NULL && numSegments > 0 && numFrames > 0)
-							poseGroup_out->pose = calloc(numSegments * numFrames, sizeof(a3_SpatialPose));
-					}
-					else if (strcmp(word, "[BasePosition]") == 0)
-						currentBlock = BasePosition;
-					else
-					{
-						currentBlock = Poses;
-						// TODO:
-						// Set to enter info for pose of [word]
+					if (parentName == NULL) {
+						printf("Missing parent for segment: %s\n", segName);
+						return 1;
 					}
 
-					blockWordNumber = -1;
+					if (segmentCount >= 256) {
+						printf("Too many segments! Array must be resized to support %d\n", segmentCount);
+						return 1;
+					}
+
+					strcpy(segmentNames[segmentCount], segName);
+
+					// TODO: track parents / hierarchy 
+
+					segmentCount++;
+
+					word = strtok(NULL, " \t\n\r");
+					blockWordNumber++;
+					continue;
+					break;
 				}
-				else
+				case BasePosition: {
+					// TODO: Parse base poses
+					break;
+				}
+				case Poses:
 				{
-
-					switch (currentBlock) {
-					case Header:
-						switch (blockWordNumber / 2)
-						{
-						case FileType:
-							break;
-						case DataType:
-							break;
-						case FileVersion:
-							break;
-						case NumSegments: {
-							// Number of body parts / joints
-							int wordInt = (int)strtol(word, NULL, 10);
-							numSegments = wordInt;
-							//poseGroup_out->hposeCount = wordInt; // causing crash
-
-							printf("NumSegments = %d\n", numSegments);
-							break;
-						}
-						case NumFrames:
-						{
-							// Number of frames across all animations
-							int wordInt = (int)strtol(word, NULL, 10);
-							numFrames = wordInt;
-							//poseGroup_out->poseCount = numFrames * numSegments; // causing crash
-
-							printf("NumFrames = %d\n", numFrames);
-							break;
-						}
-						case DataFrameRate:
-							break;
-						case EulerRotationOrder:
-
-							if (poseGroup_out->order == NULL)
-								poseGroup_out->order = malloc(sizeof(a3_SpatialPoseEulerOrder));
-
-							if (strcmp(word, "XYZ") == 0)
-								poseGroup_out->order[0] = a3poseEulerOrder_xyz;
-							else if (strcmp(word, "YZX") == 0)
-								poseGroup_out->order[0] = a3poseEulerOrder_yzx;
-							else if (strcmp(word, "ZXY") == 0)
-								poseGroup_out->order[0] = a3poseEulerOrder_zxy;
-							else if (strcmp(word, "YXZ") == 0)
-								poseGroup_out->order[0] = a3poseEulerOrder_yxz;
-							else if (strcmp(word, "XZY") == 0)
-								poseGroup_out->order[0] = a3poseEulerOrder_xzy;
-							else if (strcmp(word, "ZYX") == 0)
-								poseGroup_out->order[0] = a3poseEulerOrder_zyx;
-							break;
-						case CalibrationUnits:
-							break;
-						case RotationUnits:
-							break;
-						case GlobalAxisofGravity:
-							break;
-						case BoneLengthAxis:
-							break;
-						case ScaleFactor: {
-							float wordFloat = strtof(word, NULL);
-							// TODO: use scale factor
-							break;
-						}
-						}
-						break;
-
-					case SegmentNameAndHierarchy:
-					{
-						char* segName = word;
-						char* parentName = strtok(NULL, " \t\n\r");
-
-						if (parentName == NULL) {
-							printf("Missing parent for segment: %s\n", segName);
-							return 1;
-						}
-
-						if (segmentCount >= 256) {
-							printf("Too many segments! Array must be resized to support %d\n", segmentCount);
-							return 1;
-						}
-
-						strcpy(segmentNames[segmentCount], segName);
-
-						// TODO: track parents / hierarchy 
-
-						segmentCount++;
-
-						word = strtok(NULL, " \t\n\r");
-						blockWordNumber++;
-						continue;
-						break;
-					}
-					case BasePosition: {
-						// TODO: Parse base poses
-						break;
-					}
-					case Poses:
-					{
-						// TODO: parse poses
-						break;
-					}
-					}
-
+					// TODO: parse poses
+					break;
+				}
 				}
 				word = strtok(NULL, " \t\n\r");
 				blockWordNumber++;
