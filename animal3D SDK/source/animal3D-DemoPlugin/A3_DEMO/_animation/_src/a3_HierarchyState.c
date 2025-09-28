@@ -393,10 +393,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 		*/
 
 		FILE* fp;
-		char word[256];
-
 		fp = fopen(resourceFilePath, "r");
-
 		if (fp == NULL) 
 		{
 			perror("Error opening file");
@@ -425,14 +422,14 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 			ScaleFactor,
 		};
 
-		int numSegments;
-		int numFrames;
-		int dataFrameRate;
-		float calibrationUnitsScale;
-		a3boolean rotationUsesDegrees;
-		char globalAxisOfGravity;
-		char boneLengthAxis;
-		float scaleFactor;
+		//int numSegments;
+		//int numFrames;
+		//int dataFrameRate;
+		//float calibrationUnitsScale;
+		//a3boolean rotationUsesDegrees;
+		//char globalAxisOfGravity;
+		//char boneLengthAxis;
+		//float scaleFactor;
 
 		enum HTRBlock currentBlock = Header;
 
@@ -443,26 +440,32 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 		while (fgets(line, 512, fp) != NULL) {
 			// Iterate the lines
 			lineNumber++;
-			char* word;
 
-			word = strtok(line, " \n");
-			int blockWordNumber = -1;
 
-			if (word[0] == "#")
+
+			if (line[0] == '\n' || line[0] == '#')
+			{
+				// Skip empty lines and comments
+				lineNumber--;
 				continue;
+			}
+
+			int blockWordNumber = 0;
+			char* word = strtok(line, " \t\n\r");
 
 			while (word != NULL) {
 				// Iterate the words
-				blockWordNumber++;
 
 				if (word[0] == '[')
 				{
 					// Enter new block
-					if (word == "[Header]")
+					if (strcmp(word, "[Header]") == 0)
 						currentBlock = Header;
-					else if (word == "[SegmentNames&Hierarchy]")
+					if (strcmp(word, "[Header]") == 0)
+						currentBlock = Header;
+					else if (strcmp(word, "[SegmentNames&Hierarchy]") == 0)
 						currentBlock = SegmentNameAndHierarchy;
-					else if (word == "[BasePosition]")
+					else if (strcmp(word, "[BasePosition]") == 0)
 						currentBlock = BasePosition;
 					else if (currentBlock == BasePosition)
 						currentBlock = Poses;
@@ -475,64 +478,68 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					{
 						printf("Unknown parsed block name: %s", word);
 						blockWordNumber = -1;
-						continue;
 					}
 
 					blockWordNumber = -1;
-					continue;
-				}
+				} 
+				else 
+				{
 
-				switch (currentBlock) {
-				case Header:
-					switch (blockWordNumber / 2)
-					{
-					case FileType:
+					switch (currentBlock) {
+					case Header:
+						switch (blockWordNumber / 2)
+						{
+						case FileType:
+							break;
+						case DataType:
+							break;
+						case FileVersion:
+							break;
+						case NumSegments:
+							break;
+						case NumFrames:
+							break;
+						case DataFrameRate:
+							break;
+						case EulerRotationOrder:
+							if (word == "XYZ")
+								poseGroup_out->order[0] = a3poseEulerOrder_xyz;
+							else if (word == "YZX")
+								poseGroup_out->order[0] = a3poseEulerOrder_yzx;
+							else if (word == "ZXY")
+								poseGroup_out->order[0] = a3poseEulerOrder_zxy;
+							else if (word == "YXZ")
+								poseGroup_out->order[0] = a3poseEulerOrder_yxz;
+							else if (word == "XZY")
+								poseGroup_out->order[0] = a3poseEulerOrder_xzy;
+							else if (word == "ZYX")
+								poseGroup_out->order[0] = a3poseEulerOrder_zyx;
+							break;
+						case CalibrationUnits:
+							break;
+						case RotationUnits:
+							break;
+						case GlobalAxisofGravity:
+							break;
+						case BoneLengthAxis:
+							break;
+						case ScaleFactor:
+							break;
+						}
 						break;
-					case DataType:
+
+					case SegmentNameAndHierarchy:
+
 						break;
-					case FileVersion:
+					case BasePosition:
 						break;
-					case NumSegments:
-						break;
-					case NumFrames:
-						break;
-					case DataFrameRate:
-						break;
-					case EulerRotationOrder:
-						if (word == "XYZ")
-							poseGroup_out->order = a3poseEulerOrder_xyz;
-						else if (word == "YZX")
-							poseGroup_out->order = a3poseEulerOrder_yzx;
-						else if (word == "ZXY")
-							poseGroup_out->order = a3poseEulerOrder_zxy;
-						else if (word == "YXZ")
-							poseGroup_out->order = a3poseEulerOrder_yxz;
-						else if (word == "XZY")
-							poseGroup_out->order = a3poseEulerOrder_xzy;
-						else if (word == "ZYX")
-							poseGroup_out->order = a3poseEulerOrder_zyx;
-						break;
-					case CalibrationUnits:
-						break;
-					case RotationUnits:
-						break;
-					case GlobalAxisofGravity:
-						break;
-					case BoneLengthAxis:
-						break;
-					case ScaleFactor:
+					case Poses:
 						break;
 					}
-					break;
 
-				case SegmentNameAndHierarchy:
-
-					break;
-				case BasePosition:
-					break;
-				case Poses:
-					break;
 				}
+				word = strtok(NULL, " \t\n\r");
+				blockWordNumber++;
 			}
 		}
 
