@@ -431,8 +431,9 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 			if (word == NULL)
 				continue;
 
-			// Handle switching between blocks
-			if (word[0] == '[') {
+			if (word[0] == '[') 
+			{
+				// Handle switching between blocks
 				if (currentBlock == Header)
 				{
 					// Initialize our outputs based on the header information (the hierarchy & group based on numFrames, numSegments)
@@ -463,10 +464,6 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					else
 						printf("Hierarchy pose group created\n");
 
-					// ?. Initialize sizes of arrays based on info from header
-					//if (poseGroup_out->pose == NULL && numSegments > 0 && numFrames > 0) poseGroup_out->pose = calloc(numSegments * numFrames, sizeof(a3_SpatialPose));
-					//if (poseGroup_out->hpose == NULL && numSegments > 0 && numFrames > 0) poseGroup_out->hpose = calloc(numSegments * numFrames, sizeof(a3_SpatialPose));
-					//hierarchy_out->nodes = calloc(numSegments, sizeof(a3_HierarchyNode));
 					if (eulerOrder == -1)
 					{
 						printf("Euler order wasn't detected!\n");
@@ -497,7 +494,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 
 					// Parse the segment name to identify which block we're in
 					char segmentName[64];
-					a3i32 segmentNameLength = (int)strlen(word);
+					a3i32 segmentNameLength = (a3i32)strlen(word);
 					if (segmentNameLength > 2)
 					{
 						strncpy(segmentName, word + 1, segmentNameLength - 2);
@@ -532,11 +529,10 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 
 			if (currentBlock == BasePosition) 
 			{
-				// Parse the lines of position data
+				// Parse the lines of base position data
 
 				char segName[64];
 				a3real tx, ty, tz, rx, ry, rz;
-
 				a3i32 parsed = sscanf(originalLine, "%63s %f %f %f %f %f %f",
 					segName, &tx, &ty, &tz, &rx, &ry, &rz);
 				if (parsed != 7) {
@@ -593,12 +589,11 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					printf("Warning: frame index %d out of range\n", frameIndex);
 				}
 
-				a3i32 poseIdx = (frameIndex - 1) * numSegments + currentSegmentIndex;
-
+				a3i32 poseIndex = (frameIndex - 1) * numSegments + currentSegmentIndex;
 				a3real scale = scaleFactor * (100 / 1000);
 
-				a3spatialPoseSetRotation(&poseGroup_out->pose[poseIdx], rx, ry, rz);
-				a3spatialPoseSetTranslation(&poseGroup_out->pose[poseIdx], scale * tx, scale * ty, scale * tz);
+				a3spatialPoseSetRotation(&poseGroup_out->pose[poseIndex], rx, ry, rz);
+				a3spatialPoseSetTranslation(&poseGroup_out->pose[poseIndex], scale * tx, scale * ty, scale * tz);
 
 				parsedPoseCount++;
 				lineNumber++;
