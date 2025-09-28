@@ -28,7 +28,6 @@
 #include <string.h>
 #include <stdio.h>
 
-
 //-----------------------------------------------------------------------------
 
 // initialize pose set given an initialized hierarchy and key pose count
@@ -336,6 +335,7 @@ a3i32 a3hierarchyStateUpdateObjectBindToCurrent(const a3_HierarchyState* state, 
 
 // THIS IS THE BIG function, way bigger
 // load HTR file, read and store complete pose group and hierarchy
+// Referenced https://staffwww.dcs.shef.ac.uk/people/S.Maddock/publications/Motion%20Capture%20File%20Formats%20Explained.pdf for understanding HTR spec
 a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hierarchy* hierarchy_out, const a3byte* resourceFilePath)
 {
 	if (poseGroup_out && !poseGroup_out->hierarchy && hierarchy_out && !hierarchy_out->nodes && resourceFilePath && *resourceFilePath)
@@ -343,61 +343,12 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 		//-----------------------------------------------------------------------------
 		//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
 		//-----------------------------------------------------------------------------
-/*
-		int read, i, j, where;
-		int pos[8];	// Used to determine the position of the next char to write
-		char line[8][40];	// Used to store the attribute and the corresponding value
-		char buffer[4097];
-		int section = 0;	// Indicates which section is currently being processed
-		NODE* tnode;
-		float** base, ** rot, ** arot, ** trot;
-		float ang[3], num, den;
-		a3boolean eof = false;
-
-		FILE* file = fopen(resourceFilePath, "rb");
-		if (!file)
-			return 1;
-
-		// Process header section
-		read = fread(buffer, 1, 4096, file);
-		buffer[read] = '\0';
-		i = strstrEx(buffer, "[HEADER]");
-		i += strstrEx(buffer + i, (char)10);
-		while (buffer[++i] < 32);
-		where = pos[0] = pos[1] = pos[2] = pos[3] = pos[4] = pos[5] = pos[6] = pos[7] = 0;
-		// Process each line in the header
-		while (read && !eof)
-		{
-			while (i < read && !eof)
-			{
-				if (buffer[i] == '#' || buffer[i] == (char)10)
-				{
-					// Process line
-					line[1][pos[1]] = line[0][pos[0]] = '\0';
-					if (line[0][0] == '[')
-					{
-						if (++section == 2)
-						{
-							// Body structure has been read and ready to process the base positions
-							// So assign the GLOBAL node to the root pointer
-							//root = 0;
-							for (int j = 0; j < currentnode && !root ++j)
-							{
-
-							}
-						}
-					}
-				}
-			}
-		}
-		*/
-
 
 		enum HTRBlock {
 			Header,
 			SegmentNameAndHierarchy,
 			BasePosition,
-			Poses,
+			SegmentPoses,
 		};
 		
 		enum HeaderPositions {
@@ -415,6 +366,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 			ScaleFactor,
 		};
 
+		// TODO: unused values
 		//int dataFrameRate;
 		//float calibrationUnitsScale;
 		//a3boolean rotationUsesDegrees;
@@ -422,13 +374,25 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 		//char boneLengthAxis;
 		//float scaleFactor;
 
-		char segmentNames[256][64];
+
+		enum
+		{
+			maxSegNames = 256
+		};
+
+		enum
+		{
+			maxLineSize = 512
+		};
+
+		char segmentNames[maxSegNames][a3node_nameSize];
 		int segmentCount = 0;
 		int numFrames = 0;
 		int numSegments = 0;
 		int parsedPoseCount = 0; // for checking
+		a3_SpatialPoseEulerOrder eulerOrder;
 
-		int currentPoseSegmentIndex = -1;
+		int currentSegmentIndex = -1;
 		int currentFrameIndex = 0;
 
 		printf("----------------- HTR LOADING STARTED  ---------------\n");
@@ -438,7 +402,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 		if (fp == NULL)
 		{
 			perror("Error opening file");
-			return 1;
+			return -1;
 		}
 
 		int lineNumber = 0;
@@ -447,69 +411,110 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 		enum HTRBlock currentBlock = Header;
 		int blockWordNumber = 0;
 
-		while (fgets(line, 512, fp) != NULL) {
-			// Iterate the lines
-			char originalLine[512];
-			strcpy(originalLine, line);
-
+		// Iterate through each line
+		while (fgets(line, maxLineSize, fp) != NULL) 
+		{
+			// Ignore empty lines and comments
 			if (line[0] == '\n' || line[0] == '#')
 			{
-				// Skip empty lines and comments
 				lineNumber--;
 				continue;
 			}
 
-			char* word = strtok(line, " \t\n\r");
+			// Store a copy of the original, since we do some editing of the line itself
+			char originalLine[maxLineSize];
+			strcpy(originalLine, line);
 
+			// Gets the first word in the line
+			char* word = strtok(line, " \t\n\r");
 			if (word == NULL)
 				continue;
 
+			// Handle switching between blocks
 			if (word[0] == '[') {
-				// Enter new block
+				// First block, should be the first word in the file
 				if (strcmp(word, "[Header]") == 0)
 					currentBlock = Header;
+
+				// Second block that declares the hierarchy parent relationships of segments / nodes / joints
 				else if (strcmp(word, "[SegmentNames&Hierarchy]") == 0) {
 					currentBlock = SegmentNameAndHierarchy;
 
-					if (poseGroup_out->pose == NULL && numSegments > 0 && numFrames > 0)
-						poseGroup_out->pose = calloc(numSegments * numFrames, sizeof(a3_SpatialPose));
+					// Do processing that follows completion of header
+					// 1. Check if defined bounds are appropriate
+					if (segmentCount >= maxSegNames) {
+						printf("Too many segments! Array must be resized to support %d\n", segmentCount);
+						return -1;
+					}
+					// 2. Create the hierarchy
+					a3ret ret = a3hierarchyCreate(hierarchy_out, numSegments, 0);
+					if (ret == -1)
+						printf("Failed creating a hierarchy\n");
+					else
+						printf("Hierarchy created with %d nodes\n", (int)ret);
+
+					// 3. Create the hierarchy group
+					ret = a3hierarchyPoseGroupCreate(poseGroup_out, hierarchy_out, numFrames);
+					if (ret == -1)
+						printf("Failed creating a hierarchy pose group\n");
+					else
+						printf("Hierarchy pose group created");
+
+					// ?. Initialize sizes of arrays based on info from header
+					//if (poseGroup_out->pose == NULL && numSegments > 0 && numFrames > 0) poseGroup_out->pose = calloc(numSegments * numFrames, sizeof(a3_SpatialPose));
+					//if (poseGroup_out->hpose == NULL && numSegments > 0 && numFrames > 0) poseGroup_out->hpose = calloc(numSegments * numFrames, sizeof(a3_SpatialPose));
+					//hierarchy_out->nodes = calloc(numSegments, sizeof(a3_HierarchyNode));
+					poseGroup_out->order[0] = eulerOrder;
 				}
-				else if (strcmp(word, "[BasePosition]") == 0) {
+
+				// Third block that sets the base position of each segments / nodes / limbs
+				else if (strcmp(word, "[BasePosition]") == 0)
 					currentBlock = BasePosition;
-				}
-				else {
-					// TODO: 
-					// Set to enter info for pose of [word]
-					currentBlock = Poses;
 
-					char segName[64];
-					int len = (int)strlen(word);
-					if (len > 2) {
-						strncpy(segName, word + 1, len - 2);
-						segName[len - 2] = '\0';
+				// The rest of the blocks are for each segment, which define the position for each frame
+				else 
+				{
+					// We're in a segment's pose block, such as [Hips]
+					currentBlock = SegmentPoses;
 
-						currentPoseSegmentIndex = -1;
-						for (int i = 0; i < segmentCount; i++) {
-							if (strcmp(segmentNames[i], segName) == 0) {
-								currentPoseSegmentIndex = i;
+					// Parse the segment name to identify which block we're in
+					char segmentName[64];
+					int segmentNameLength = (int)strlen(word);
+					if (segmentNameLength > 2) 
+					{
+						strncpy(segmentName, word + 1, segmentNameLength - 2);
+						segmentName[segmentNameLength - 2] = '\0';
+
+						currentSegmentIndex = -1;
+						for (int i = 0; i < segmentCount; i++) 
+						{
+							if (strcmp(segmentNames[i], segmentName) == 0) 
+							{
+								currentSegmentIndex = i;
 								break;
 							}
 						}
 
-						if (currentPoseSegmentIndex == -1) {
-							if (strcmp(segName, "EndOfFile") == 0)
+						if (currentSegmentIndex == -1) 
+						{
+							if (strcmp(segmentName, "EndOfFile") == 0)
 								break;
-							printf("Unknown segment in [Poses] block: %s\n", segName);
-							return 1;
+
+							printf("Unknown segment in [Poses] block: %s\n", segmentName);
+							return -1;
 						}
 						currentFrameIndex = 0;
 					}
+
+					// TODO: 2. Set the base position of that segment
 				}
 
 				continue;
 			}
 
 			if (currentBlock == BasePosition) {
+				// Parse the lines of position data
+
 				char segName[64];
 				float tx, ty, tz, rx, ry, rz;
 
@@ -517,38 +522,35 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					segName, &tx, &ty, &tz, &rx, &ry, &rz);
 				if (parsed != 7) {
 					printf("Failed to parse BasePosition line: %s\n", originalLine);
-					return 1;
+					return -1;
 				}
 
-				int idx = -1;
+				// Find pose in the pose array
+				int poseIndex = -1;
 				for (int i = 0; i < segmentCount; i++) {
 					if (strcmp(segmentNames[i], segName) == 0) {
-						idx = i;
+						poseIndex = i;
 						break;
 					}
 				}
-				if (idx == -1) {
+				if (poseIndex == -1) {
 					printf("Unknown segment in base pose: %s\n", segName);
-					return 1;
+					return -1;
 				}
 
-				poseGroup_out->pose[idx].translate.x = tx;
-				poseGroup_out->pose[idx].translate.y = ty;
-				poseGroup_out->pose[idx].translate.z = tz;
-
-				poseGroup_out->pose[idx].rotate.x = rx;
-				poseGroup_out->pose[idx].rotate.y = ry;
-				poseGroup_out->pose[idx].rotate.z = rz;
+				a3spatialPoseSetTranslation(poseGroup_out->hpose[poseIndex].hpose_base, tx, ty, tz);
+				a3spatialPoseSetRotation(poseGroup_out->hpose[poseIndex].hpose_base, tx, ty, tz);
+				//a3SpacialPoseSetScale(&poseGroup_out->hpose[poseIndex].hpose_base, sf)
 
 				lineNumber++;
 				continue;
 			}
-			else if (currentBlock == Poses && originalLine[0] != '[') {
-				int frameIdx;
-				float tx, ty, tz, rx, ry, rz, scale;
+			else if (currentBlock == SegmentPoses && originalLine[0] != '[') {
+				int frameIndex;
+				float tx, ty, tz, rx, ry, rz, sf;
 
 				int parsed = sscanf(originalLine, "%d %f %f %f %f %f %f %f",
-					&frameIdx, &tx, &ty, &tz, &rx, &ry, &rz, &scale);
+					&frameIndex, &tx, &ty, &tz, &rx, &ry, &rz, &sf);
 
 				if (parsed != 8) {
 					printf("Failed to parse pose line: %s\n", originalLine);
@@ -556,15 +558,15 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					continue;
 				}
 
-				if (currentPoseSegmentIndex < 0) {
+				if (currentSegmentIndex < 0) {
 					printf("Error: pose segment not set before poses.\n");
-					return 1;
+					return -1;
 				}
-				if (frameIdx < 1 || frameIdx > numFrames) {
-					printf("Warning: frame index %d out of range\n", frameIdx);
+				if (frameIndex < 1 || frameIndex > numFrames) {
+					printf("Warning: frame index %d out of range\n", frameIndex);
 				}
 
-				int poseIdx = (frameIdx - 1) * numSegments + currentPoseSegmentIndex;
+				int poseIdx = (frameIndex - 1) * numSegments + currentSegmentIndex;
 
 				poseGroup_out->pose[poseIdx].translate.x = tx;
 				poseGroup_out->pose[poseIdx].translate.y = ty;
@@ -574,7 +576,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 				poseGroup_out->pose[poseIdx].rotate.y = ry;
 				poseGroup_out->pose[poseIdx].rotate.z = rz;
 
-				poseGroup_out->pose[poseIdx].scale.x = scale;
+				poseGroup_out->pose[poseIdx].scale.x = sf;
 
 				parsedPoseCount++;
 				lineNumber++;
@@ -588,6 +590,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 
 				switch (currentBlock) {
 				case Header:
+					if (blockWordNumber % 2 == 0) break;
 					switch (blockWordNumber / 2)
 					{
 					case FileType:
@@ -600,7 +603,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 						// Number of body parts / joints
 						int wordInt = (int)strtol(word, NULL, 10);
 						numSegments = wordInt;
-						//poseGroup_out->hposeCount = wordInt; // causing crash
+						poseGroup_out->hposeCount = wordInt; // causing crash
 
 						printf("NumSegments = %d\n", numSegments);
 						break;
@@ -610,7 +613,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 						// Number of frames across all animations
 						int wordInt = (int)strtol(word, NULL, 10);
 						numFrames = wordInt;
-						//poseGroup_out->poseCount = numFrames * numSegments; // causing crash
+						poseGroup_out->poseCount = numFrames * numSegments; // causing crash
 
 						printf("NumFrames = %d\n", numFrames);
 						break;
@@ -619,21 +622,20 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 						break;
 					case EulerRotationOrder:
 
-						if (poseGroup_out->order == NULL)
-							poseGroup_out->order = malloc(sizeof(a3_SpatialPoseEulerOrder));
+						if (poseGroup_out->order == NULL) poseGroup_out->order = malloc(1 * sizeof(a3_SpatialPoseEulerOrder));
 
 						if (strcmp(word, "XYZ") == 0)
-							poseGroup_out->order[0] = a3poseEulerOrder_xyz;
+							eulerOrder = a3poseEulerOrder_xyz;
 						else if (strcmp(word, "YZX") == 0)
-							poseGroup_out->order[0] = a3poseEulerOrder_yzx;
+							eulerOrder = a3poseEulerOrder_yzx;
 						else if (strcmp(word, "ZXY") == 0)
-							poseGroup_out->order[0] = a3poseEulerOrder_zxy;
+							eulerOrder = a3poseEulerOrder_zxy;
 						else if (strcmp(word, "YXZ") == 0)
-							poseGroup_out->order[0] = a3poseEulerOrder_yxz;
+							eulerOrder = a3poseEulerOrder_yxz;
 						else if (strcmp(word, "XZY") == 0)
-							poseGroup_out->order[0] = a3poseEulerOrder_xzy;
+							eulerOrder = a3poseEulerOrder_xzy;
 						else if (strcmp(word, "ZYX") == 0)
-							poseGroup_out->order[0] = a3poseEulerOrder_zyx;
+							eulerOrder = a3poseEulerOrder_zyx;
 						break;
 					case CalibrationUnits:
 						break;
@@ -655,20 +657,45 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 				{
 					char* segName = word;
 					char* parentName = strtok(NULL, " \t\n\r");
+					int segIndex = -1;
+					int parentIndex = -1;
+
+					if (hierarchy_out->nodes == NULL) {
+						printf("What");
+					}
+
+					for (a3ui32 j = 0; j < hierarchy_out->numNodes; j++)
+					{
+						if (strcmp(segName, hierarchy_out->nodes[j].name) == 0)
+						{
+							segIndex = (int)j;
+						}
+
+						if (strcmp(parentName, "GLOBAL") == 0)
+							parentIndex = -1;
+						else if (strcmp(parentName, hierarchy_out->nodes[j].name) == 0)
+							parentIndex = (int)j;
+					}
+
 
 					if (parentName == NULL) {
 						printf("Missing parent for segment: %s\n", segName);
-						return 1;
-					}
-
-					if (segmentCount >= 256) {
-						printf("Too many segments! Array must be resized to support %d\n", segmentCount);
-						return 1;
+						return -1;
 					}
 
 					strcpy(segmentNames[segmentCount], segName);
 
-					// TODO: track parents / hierarchy 
+					if (parentIndex == -2)
+					{
+						printf("Error, segment declared with unknown parent: %s, the node is %s/n", parentName, segName);
+						return -1;
+					}
+
+					a3ret ret = a3hierarchySetNode(hierarchy_out, segIndex, parentIndex, segName);
+					if (ret == -1)
+					{
+						printf("Error trying to set node");
+					}
 
 					segmentCount++;
 
@@ -681,7 +708,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					// TODO: Parse base poses
 					break;
 				}
-				case Poses:
+				case SegmentPoses:
 				{
 					// TODO: parse poses
 					break;
@@ -699,6 +726,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 		printf("Parsed (real) segment count: %d\n", segmentCount);
 		printf("Parsed (real) pose count: %d\n", parsedPoseCount);
 		printf("----------------- HTR LOADING FINISHED ---------------\n");
+		return 1;
 
 		//-----------------------------------------------------------------------------
 		//****END-TO-DO-PROJECT-2
