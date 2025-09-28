@@ -25,9 +25,27 @@
 #include "../a3_SpatialPose.h"
 
 
+a3i32 a3fixRot(a3real* parameter, a3real maxRot) 
+{
+	while (*parameter > maxRot)
+	{
+		*parameter -= maxRot;
+	}
+	while (*parameter < -maxRot)
+	{
+		*parameter += maxRot;
+	}
+
+	return 1;
+}
+
 //-----------------------------------------------------------------------------
 
 // convert single node pose to matrix
+
+// used by:
+// a3hierarchyPoseConvert
+
 a3i32 a3spatialPoseConvert(a3_SpatialPose* spatialPose, const a3_SpatialPoseChannel channel, const a3_SpatialPoseEulerOrder order)
 {
 	if (spatialPose)
@@ -35,12 +53,64 @@ a3i32 a3spatialPoseConvert(a3_SpatialPose* spatialPose, const a3_SpatialPoseChan
 //-----------------------------------------------------------------------------
 //****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
 //-----------------------------------------------------------------------------
-		
+
+		a3real4 scale;
+		a3real4 rotation;
+
+		// Scale
+		if (channel && a3poseChannel_scale_x) a3real4Add(scale, &spatialPose->scale.x);
+		if (channel && a3poseChannel_scale_y) a3real4Add(scale, &spatialPose->scale.y);
+		if (channel && a3poseChannel_scale_z) a3real4Add(scale, &spatialPose->scale.z);
+
+		// Rotation
+		if (channel && a3poseChannel_rotate_x) a3fixRot(&spatialPose->rotate.x, 360.0);
+		if (channel && a3poseChannel_rotate_y) a3fixRot(&spatialPose->rotate.y, 360.0);
+		if (channel && a3poseChannel_rotate_z) a3fixRot(&spatialPose->rotate.z, 360.0);
+
+		switch (order) 
+		{
+			case a3poseEulerOrder_xyz:
+				a3real4Add(rotation, &spatialPose->rotate.x);
+				a3real4Add(rotation, &spatialPose->rotate.y);
+				a3real4Add(rotation, &spatialPose->rotate.z);
+				break;
+			case a3poseEulerOrder_xzy:
+				a3real4Add(rotation, &spatialPose->rotate.x);
+				a3real4Add(rotation, &spatialPose->rotate.z);
+				a3real4Add(rotation, &spatialPose->rotate.y);
+				break;
+			case a3poseEulerOrder_yxz:
+				a3real4Add(rotation, &spatialPose->rotate.y);
+				a3real4Add(rotation, &spatialPose->rotate.x);
+				a3real4Add(rotation, &spatialPose->rotate.z);
+				break;
+			case a3poseEulerOrder_yzx:
+				a3real4Add(rotation, &spatialPose->rotate.y);
+				a3real4Add(rotation, &spatialPose->rotate.z);
+				a3real4Add(rotation, &spatialPose->rotate.x);
+				break;
+			case a3poseEulerOrder_zxy:
+				a3real4Add(rotation, &spatialPose->rotate.z);
+				a3real4Add(rotation, &spatialPose->rotate.x);
+				a3real4Add(rotation, &spatialPose->rotate.y);
+				break;
+			case a3poseEulerOrder_zyx:
+				a3real4Add(rotation, &spatialPose->rotate.z);
+				a3real4Add(rotation, &spatialPose->rotate.y);
+				a3real4Add(rotation, &spatialPose->rotate.x);
+				break;
+		}
+
+		a3real4ProductComp(scale, rotation, scale);
+		a3real3MulComp(spatialPose->transformMat.m[3], scale);
+
 		// this is a large function :(
 		// go thru each channel, see if its used, and convert
 
 		// YOU WANT TO DO THIS PROPERLY ok i will
 		// -> form a single matrix for each channel
+
+
 		
 		// mat4 pos
 		// mat4 rot
@@ -48,16 +118,20 @@ a3i32 a3spatialPoseConvert(a3_SpatialPose* spatialPose, const a3_SpatialPoseChan
 
 		// t + R * S * v
 
+		// use helper functions 
+
 		// -> concat (matrix mul) them in the correct order  
 		//		-> v' = t + R * S * v (right to left)
 		// this operation is represented as a 4x4 matrix
 
 		// TEMPORARY (for testing, dont keep this here, do the above!)
+
+		/*
 		a3real4x4SetRotateZYX(spatialPose->transformMat.m, 
 			a3trigValid_sind(spatialPose->rotate.x), 
 			a3trigValid_sind(spatialPose->rotate.y), 
 			a3trigValid_sind(spatialPose->rotate.z)
-		);
+		);*/
 
 		// this part can stay
 		a3real3Add(spatialPose->transformMat.m[3], spatialPose->translate.v);
