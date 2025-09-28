@@ -77,15 +77,15 @@ a3i32 a3spatialPoseRestore(a3_SpatialPose* spatialPose, const a3_SpatialPoseChan
 {
 	if (spatialPose)
 	{
-//-----------------------------------------------------------------------------
-//****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
-//-----------------------------------------------------------------------------
-		
+		//-----------------------------------------------------------------------------
+		//****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
+		//-----------------------------------------------------------------------------
 
 
-//-----------------------------------------------------------------------------
-//****END-TO-DO-PROJECT-3
-//-----------------------------------------------------------------------------
+
+		//-----------------------------------------------------------------------------
+		//****END-TO-DO-PROJECT-3
+		//-----------------------------------------------------------------------------
 	}
 	return -1;
 }
@@ -106,19 +106,19 @@ a3i32 a3spatialPoseConcat(a3_SpatialPose* spatialPose_out, const a3_SpatialPose*
 {
 	if (spatialPose_out && spatialPose_lhs && spatialPose_rhs)
 	{
-//-----------------------------------------------------------------------------
-//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
-//-----------------------------------------------------------------------------
-		
-		// add the two pose channels together
+		//-----------------------------------------------------------------------------
+		//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
+		//-----------------------------------------------------------------------------
+
+				// add the two pose channels together
 		a3real4Sum(spatialPose_out->rotate.v, spatialPose_lhs->rotate.v, spatialPose_rhs->rotate.v);
 		a3real4Sum(spatialPose_out->translate.v, spatialPose_lhs->translate.v, spatialPose_rhs->translate.v);
 		//a3real4Sum(spatialPose_out->scale.v, spatialPose_lhs->scale.v, spatialPose_rhs->scale.v); // scale is not additive. scale is multiplication for concatination
 		a3real4ProductComp(spatialPose_out->scale.v, spatialPose_lhs->scale.v, spatialPose_rhs->scale.v);
 
-//-----------------------------------------------------------------------------
-//****END-TO-DO-PROJECT-2
-//-----------------------------------------------------------------------------
+		//-----------------------------------------------------------------------------
+		//****END-TO-DO-PROJECT-2
+		//-----------------------------------------------------------------------------
 	}
 	return -1;
 }
@@ -128,31 +128,31 @@ a3i32 a3spatialPoseDeconcat(a3_SpatialPose* spatialPose_out, const a3_SpatialPos
 {
 	if (spatialPose_out && spatialPose_lhs && spatialPose_rhs)
 	{
-//-----------------------------------------------------------------------------
-//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
-//-----------------------------------------------------------------------------
-			
+		//-----------------------------------------------------------------------------
+		//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
+		//-----------------------------------------------------------------------------
+
 		a3real4Diff(spatialPose_out->rotate.v, spatialPose_lhs->rotate.v, spatialPose_rhs->rotate.v);
 		a3real4Diff(spatialPose_out->translate.v, spatialPose_lhs->translate.v, spatialPose_rhs->translate.v);
 		a3real4QuotientComp(spatialPose_out->scale.v, spatialPose_lhs->scale.v, spatialPose_rhs->scale.v);
-			   
-//-----------------------------------------------------------------------------
-//****END-TO-DO-PROJECT-2
-//-----------------------------------------------------------------------------
-	}		   
-	return -1; 
-}			   
-			   
+
+		//-----------------------------------------------------------------------------
+		//****END-TO-DO-PROJECT-2
+		//-----------------------------------------------------------------------------
+	}
+	return -1;
+}
+
 // lerp		   
 a3i32 a3spatialPoseLerp(a3_SpatialPose* spatialPose_out, const a3_SpatialPose* spatialPose_0, const a3_SpatialPose* spatialPose_1, const a3real u)
-{			   
+{
 	if (spatialPose_out && spatialPose_0 && spatialPose_1)
-	{		   
-//-----------------------------------------------------------------------------
-//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
-//-----------------------------------------------------------------------------
-		
-		// wuaew !
+	{
+		//-----------------------------------------------------------------------------
+		//****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
+		//-----------------------------------------------------------------------------
+
+				// wuaew !
 		a3real4Lerp(spatialPose_out->rotate.v, spatialPose_0->rotate.v, spatialPose_1->rotate.v, u);
 		a3real4Lerp(spatialPose_out->translate.v, spatialPose_0->translate.v, spatialPose_1->translate.v, u);
 		a3real4Lerp(spatialPose_out->scale.v, spatialPose_0->scale.v, spatialPose_1->scale.v, u);

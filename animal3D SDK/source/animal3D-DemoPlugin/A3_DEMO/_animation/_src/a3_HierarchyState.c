@@ -377,7 +377,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 
 		enum
 		{
-			maxSegNames = 256
+			maxSegNames = 128
 		};
 
 		enum
@@ -390,7 +390,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 		int numFrames = 0;
 		int numSegments = 0;
 		int parsedPoseCount = 0; // for checking
-		a3_SpatialPoseEulerOrder eulerOrder;
+		a3_SpatialPoseEulerOrder eulerOrder = -1;
 
 		int currentSegmentIndex = -1;
 		int currentFrameIndex = 0;
@@ -464,6 +464,11 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					//if (poseGroup_out->pose == NULL && numSegments > 0 && numFrames > 0) poseGroup_out->pose = calloc(numSegments * numFrames, sizeof(a3_SpatialPose));
 					//if (poseGroup_out->hpose == NULL && numSegments > 0 && numFrames > 0) poseGroup_out->hpose = calloc(numSegments * numFrames, sizeof(a3_SpatialPose));
 					//hierarchy_out->nodes = calloc(numSegments, sizeof(a3_HierarchyNode));
+					if (eulerOrder == -1)
+					{
+						printf("Euler order wasn't detected!\n");
+						return -1;
+					}
 					poseGroup_out->order[0] = eulerOrder;
 				}
 
@@ -584,11 +589,9 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 				continue;
 			}
 
-
 			while (word != NULL) {
-				// Iterate the words
-
-				switch (currentBlock) {
+				switch (currentBlock) 
+				{
 				case Header:
 					if (blockWordNumber % 2 == 0) break;
 					switch (blockWordNumber / 2)
@@ -667,9 +670,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					for (a3ui32 j = 0; j < hierarchy_out->numNodes; j++)
 					{
 						if (strcmp(segName, hierarchy_out->nodes[j].name) == 0)
-						{
 							segIndex = (int)j;
-						}
 
 						if (strcmp(parentName, "GLOBAL") == 0)
 							parentIndex = -1;
@@ -694,7 +695,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					a3ret ret = a3hierarchySetNode(hierarchy_out, segIndex, parentIndex, segName);
 					if (ret == -1)
 					{
-						printf("Error trying to set node");
+						printf("Error trying to set node\n");
 					}
 
 					segmentCount++;
@@ -720,7 +721,6 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 			lineNumber++;
 		}
 		fclose(fp);
-		poseGroup_out->hierarchy = hierarchy_out;
 
 		printf("HTR loading completed!\n\n");
 		printf("Parsed (real) segment count: %d\n", segmentCount);
