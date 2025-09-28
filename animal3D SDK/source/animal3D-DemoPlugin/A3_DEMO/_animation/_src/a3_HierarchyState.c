@@ -697,7 +697,6 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					word = strtok(NULL, " \t\n\r");
 					blockWordNumber++;
 					continue;
-					break;
 				}
 				}
 				word = strtok(NULL, " \t\n\r");
