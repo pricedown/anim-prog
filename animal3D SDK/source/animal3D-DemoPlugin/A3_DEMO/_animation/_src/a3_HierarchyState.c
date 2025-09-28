@@ -411,8 +411,11 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 		enum HTRBlock currentBlock = Header;
 		int blockWordNumber = 0;
 
+
+		int currentSegmentNodeIndex = 0;
+
 		// Iterate through each line
-		while (fgets(line, maxLineSize, fp) != NULL) 
+		while (fgets(line, maxLineSize, fp) != NULL)
 		{
 			// Ignore empty lines and comments
 			if (line[0] == '\n' || line[0] == '#')
@@ -421,7 +424,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 				continue;
 			}
 
-			// Store a copy of the original, since we do some editing of the line itself
+			// Store a copy of the original line , since we do some editing of the line itself
 			char originalLine[maxLineSize];
 			strcpy(originalLine, line);
 
@@ -432,31 +435,33 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 
 			// Handle switching between blocks
 			if (word[0] == '[') {
-				// First block, should be the first word in the file
-				if (strcmp(word, "[Header]") == 0)
-					currentBlock = Header;
+				if (currentBlock == Header)
+				{
+					// Initialize our outputs based on the header information (the hierarchy & group based on numFrames, numSegments)
 
-				// Second block that declares the hierarchy parent relationships of segments / nodes / joints
-				else if (strcmp(word, "[SegmentNames&Hierarchy]") == 0) {
-					currentBlock = SegmentNameAndHierarchy;
-
-					// Do processing that follows completion of header
-					// 1. Check if defined bounds are appropriate
+					// 1. Check to make sure we're within boundsj
 					if (segmentCount >= maxSegNames) {
 						printf("Too many segments! Array must be resized to support %d\n", segmentCount);
 						return -1;
 					}
+
 					// 2. Create the hierarchy
 					a3ret ret = a3hierarchyCreate(hierarchy_out, numSegments, 0);
 					if (ret == -1)
+					{
 						printf("Failed creating a hierarchy\n");
+						return -1;
+					}
 					else
 						printf("Hierarchy created with %d nodes\n", (int)ret);
 
 					// 3. Create the hierarchy group
 					ret = a3hierarchyPoseGroupCreate(poseGroup_out, hierarchy_out, numFrames);
 					if (ret == -1)
+					{
 						printf("Failed creating a hierarchy pose group\n");
+						return -1;
+					}
 					else
 						printf("Hierarchy pose group created");
 
@@ -472,12 +477,22 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					poseGroup_out->order[0] = eulerOrder;
 				}
 
+				// First block, should be the first word in the file
+				if (strcmp(word, "[Header]") == 0)
+					currentBlock = Header;
+
+				// Second block that declares the hierarchy parent relationships of segments / nodes / joints
+				else if (strcmp(word, "[SegmentNames&Hierarchy]") == 0) {
+					currentBlock = SegmentNameAndHierarchy;
+
+				}
+
 				// Third block that sets the base position of each segments / nodes / limbs
 				else if (strcmp(word, "[BasePosition]") == 0)
 					currentBlock = BasePosition;
 
 				// The rest of the blocks are for each segment, which define the position for each frame
-				else 
+				else
 				{
 					// We're in a segment's pose block, such as [Hips]
 					currentBlock = SegmentPoses;
@@ -485,22 +500,22 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					// Parse the segment name to identify which block we're in
 					char segmentName[64];
 					int segmentNameLength = (int)strlen(word);
-					if (segmentNameLength > 2) 
+					if (segmentNameLength > 2)
 					{
 						strncpy(segmentName, word + 1, segmentNameLength - 2);
 						segmentName[segmentNameLength - 2] = '\0';
 
 						currentSegmentIndex = -1;
-						for (int i = 0; i < segmentCount; i++) 
+						for (int i = 0; i < segmentCount; i++)
 						{
-							if (strcmp(segmentNames[i], segmentName) == 0) 
+							if (strcmp(segmentNames[i], segmentName) == 0)
 							{
 								currentSegmentIndex = i;
 								break;
 							}
 						}
 
-						if (currentSegmentIndex == -1) 
+						if (currentSegmentIndex == -1)
 						{
 							if (strcmp(segmentName, "EndOfFile") == 0)
 								break;
@@ -590,18 +605,20 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 			}
 
 			while (word != NULL) {
-				switch (currentBlock) 
+				switch (currentBlock)
 				{
 				case Header:
 					if (blockWordNumber % 2 == 0) break;
 					switch (blockWordNumber / 2)
 					{
-					case FileType:
-						break;
-					case DataType:
-						break;
-					case FileVersion:
-						break;
+						/*
+						case FileType:
+							break;
+						case DataType:
+							break;
+						case FileVersion:
+							break;
+							*/
 					case NumSegments: {
 						// Number of body parts / joints
 						int wordInt = (int)strtol(word, NULL, 10);
@@ -621,8 +638,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 						printf("NumFrames = %d\n", numFrames);
 						break;
 					}
-					case DataFrameRate:
-						break;
+					//case DataFrameRate: break;
 					case EulerRotationOrder:
 
 						if (poseGroup_out->order == NULL) poseGroup_out->order = malloc(1 * sizeof(a3_SpatialPoseEulerOrder));
@@ -640,59 +656,48 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 						else if (strcmp(word, "ZYX") == 0)
 							eulerOrder = a3poseEulerOrder_zyx;
 						break;
-					case CalibrationUnits:
-						break;
-					case RotationUnits:
-						break;
-					case GlobalAxisofGravity:
-						break;
-					case BoneLengthAxis:
-						break;
-					case ScaleFactor: {
-						float wordFloat = strtof(word, NULL);
-						// TODO: use scale factor
-						break;
-					}
+						/*
+						case CalibrationUnits:
+							break;
+						case RotationUnits:
+							break;
+						case GlobalAxisofGravity:
+							break;
+						case BoneLengthAxis:
+							break;
+						case ScaleFactor: {
+							float wordFloat = strtof(word, NULL);
+							// TODO: use scale factor
+							break;
+						}
+						*/
 					}
 					break;
 
 				case SegmentNameAndHierarchy:
 				{
-					char* segName = word;
+					// Populate the node hierarchy with the segment-parent relationships
+					char* segmentName = word;
 					char* parentName = strtok(NULL, " \t\n\r");
-					int segIndex = -1;
+
+					// Find the referenced parent's existing index in the hierarchy
 					int parentIndex = -1;
-
-					if (hierarchy_out->nodes == NULL) {
-						printf("What");
-					}
-
-					for (a3ui32 j = 0; j < hierarchy_out->numNodes; j++)
+					if (strcmp(parentName, "GLOBAL") != 0)
 					{
-						if (strcmp(segName, hierarchy_out->nodes[j].name) == 0)
-							segIndex = (int)j;
-
-						if (strcmp(parentName, "GLOBAL") == 0)
-							parentIndex = -1;
-						else if (strcmp(parentName, hierarchy_out->nodes[j].name) == 0)
-							parentIndex = (int)j;
+						for (a3ui32 j = 0; j < hierarchy_out->numNodes; j++)
+							if (strcmp(parentName, hierarchy_out->nodes[j].name) == 0)
+								parentIndex = (int)j;
 					}
 
+					strcpy(segmentNames[segmentCount], segmentName);
 
-					if (parentName == NULL) {
-						printf("Missing parent for segment: %s\n", segName);
+					if (parentIndex == -1)
+					{
+						printf("Error, segment declared with unknown parent: %s, the node is %s/n", parentName, segmentName);
 						return -1;
 					}
 
-					strcpy(segmentNames[segmentCount], segName);
-
-					if (parentIndex == -2)
-					{
-						printf("Error, segment declared with unknown parent: %s, the node is %s/n", parentName, segName);
-						return -1;
-					}
-
-					a3ret ret = a3hierarchySetNode(hierarchy_out, segIndex, parentIndex, segName);
+					a3ret ret = a3hierarchySetNode(hierarchy_out, currentSegmentNodeIndex, parentIndex, segmentName);
 					if (ret == -1)
 					{
 						printf("Error trying to set node\n");
