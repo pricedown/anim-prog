@@ -590,7 +590,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 				}
 
 				a3i32 poseIndex = (frameIndex - 1) * numSegments + currentSegmentIndex;
-				a3real scale = scaleFactor * (100.0f / 1000.0f) * 0.f;
+				a3real scale = scaleFactor * (100.0f / 1000.0f);
 				
 				//a3spatialPoseSetScale(&poseGroup_out->pose[poseIndex], scale, scale, scale);
 				a3spatialPoseSetRotation(&poseGroup_out->pose[poseIndex], rx, ry, rz);
