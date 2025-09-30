@@ -1,3 +1,5 @@
+// Authors:  Joseph Isaacs, Seth Riddensdale
+
 /*
 	Copyright 2011-2025 Daniel S. Buckstein
 
@@ -8,6 +10,7 @@
 		http://www.apache.org/licenses/LICENSE-2.0
 
 	Unless required by applicable law or agreed to in writing, software
+
 	distributed under the License is distributed on an "AS IS" BASIS,
 	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 	See the License for the specific language governing permissions and
@@ -564,6 +567,8 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					printf("Warning: frame index %d out of range\n", frameIndex);
 				}
 
+				// We got help from Will and Tristan for the layout of the data in memory!
+				// They helped us debug and reach this answer, not directly copied it
 				a3i32 offset = a3hierarchyPoseGroupGetNodePoseOffsetIndex(poseGroup_out, frameIndex - 1, currentSegmentIndex);
 				a3i32 poseIndex = offset + currentAnimIndex * numSegments;
 				a3spatialPoseSetTranslation(&poseGroup_out->pose[poseIndex], globalScale * tx, globalScale * ty, globalScale * tz);
@@ -638,10 +643,10 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 							break;
 						*/
 
-						case ScaleFactor: {
+						case ScaleFactor: 
+						{
 							scaleFactor = strtof(word, NULL);
-							globalScale = scaleFactor * (1.0f / 10.0f);
-							globalScale = 0.005f;
+							globalScale = scaleFactor * (100.0f / 1000.0f);
 							break;
 						}
 					}

@@ -1,3 +1,5 @@
+// Authors:  Joseph Isaacs, Seth Riddensdale
+
 /*
 	Copyright 2011-2025 Daniel S. Buckstein
 
