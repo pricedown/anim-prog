@@ -120,10 +120,31 @@ a3i32 a3spatialPoseConvert(a3_SpatialPose* spatialPose, const a3_SpatialPoseChan
 		}
 		}
 
+		// 2. Scale
+		if (channel & a3poseChannel_scale_x)
+			scale[0][0] = spatialPose->scale.x;
+		if (channel & a3poseChannel_scale_y)
+			scale[1][1] = spatialPose->scale.y;
+		if (channel & a3poseChannel_scale_y)
+			scale[2][2] = spatialPose->scale.z;
+
+		// 3. Translation
+		if (channel & a3poseChannel_translate_x)
+			translation[3][0] = spatialPose->translate.x;
+		if (channel & a3poseChannel_translate_y)
+			translation[3][1] = spatialPose->translate.y;
+		if (channel & a3poseChannel_translate_z)
+			translation[3][2] = spatialPose->translate.z;
+
+		// tests
+		a3real4x4SetRotateZYX(rotation, a3trigValid_sind(spatialPose->rotate.x), a3trigValid_sind(spatialPose->rotate.y), a3trigValid_sind(spatialPose->rotate.z));
+
 		// Concatenate the matrices
-		a3real4x4ConcatL(scale, rotation);
-		a3real4x4ConcatL(&spatialPose->transformMat.m[3], scale);
-		a3real3Add(spatialPose->transformMat.m[3], spatialPose->translate.v);
+		//a3real4x4ConcatL(scale, rotation);
+		//a3real4x4ConcatL(translation, scale);
+		a3real4x4ConcatL(spatialPose->transformMat.m, scale);
+		a3real4x4ConcatL(spatialPose->transformMat.m, rotation);
+		a3real4x4ConcatL(spatialPose->transformMat.m, translation);
 
 		// **** DO THIS EVERYWHERE IN THIS FILE:
 		// -> make sure rotation angles are within [-360, +360] a3trigValid_sind
