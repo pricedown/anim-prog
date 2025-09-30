@@ -107,7 +107,11 @@ static inline void a3kinematicsSolveInverseSingle(const a3_HierarchyState* hiera
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
-
+	// T[this_local] = T[parent_object]^-1 * T[this_object]
+	a3real4x4Product(hierarchyState->localSpace->hpose_base[index].transformMat.m, 
+		hierarchyState->objectSpaceInv->hpose_base[parentIndex].transformMat.m, 
+		hierarchyState->objectSpace->hpose_base[index].transformMat.m);
+	
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-3
@@ -119,7 +123,7 @@ static inline void a3kinematicsSolveInverseRoot(const a3_HierarchyState* hierarc
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
-
+	hierarchyState->localSpace->hpose_base[index].transformMat = hierarchyState->objectSpace->hpose_base[index].transformMat;
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-3
@@ -142,7 +146,23 @@ a3i32 a3kinematicsSolveInversePartial(const a3_HierarchyState* hierarchyState, c
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
+		a3ui32 i;
+		for (i = firstIndex; i < nodeCount; ++i)
+		{
+			if (hierarchyState->hierarchy->nodes[i].parentIndex < 0)
+			{
+				// We are the root
+				a3kinematicsSolveInverseRoot(hierarchyState, hierarchyState->hierarchy->nodes[i].index);
+			}
+			else 
+			{
+				// We are not the root
+				a3kinematicsSolveInverseSingle(hierarchyState, 
+					hierarchyState->hierarchy->nodes[i].index, 
+					hierarchyState->hierarchy->nodes[i].parentIndex);
 
+			}
+		}
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-3
@@ -208,6 +228,22 @@ void a3kinematicsUpdateHierarchyStateIK(a3_HierarchyState* activeHS,
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
+		// (Author statement): BLATANTLY PLAGARISED DIRECTLY FROM DANIEL S. BUCKSTEIN
+		// for every joint in the hierarchy
+		// we now have the animation pose from this concatonate pose. we have a description of the pose, now e need to convert it
+		a3kinematicsSolveInverse(activeHS); // finally, do FK algoritm
+		a3hierarchyPoseRestore(
+			activeHS->localSpace,	// goal: convert local pose description to matrix
+			activeHS->hierarchy->numNodes,		
+			poseGroup->channel,
+			poseGroup->order
+		);
+		a3hierarchyPoseDeconcat(
+			activeHS->animPose,		// Result: animation pose
+			activeHS->localSpace,	// LH input: local pose
+			baseHS->localSpace,		// Subtract base local
+			activeHS->hierarchy->numNodes 
+		);
 
 
 //-----------------------------------------------------------------------------
