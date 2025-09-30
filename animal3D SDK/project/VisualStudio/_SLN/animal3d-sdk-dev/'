@@ -55,23 +55,23 @@ a3i32 a3spatialPoseConvert(a3_SpatialPose* spatialPose, const a3_SpatialPoseChan
 //-----------------------------------------------------------------------------
 
 		a3real4x4 translation, rotation, scale;
-		a3real4x4SetIdentity(translation);
-		a3real4x4SetIdentity(rotation);
-		a3real4x4SetIdentity(scale);
-		a3real4x4SetIdentity(spatialPose->transformMat.m);
+		a3real4x4SetIdentity(&translation);
+		a3real4x4SetIdentity(&rotation);
+		a3real4x4SetIdentity(&scale);
+		a3real4x4SetIdentity(&spatialPose->transformMat.m);
 
 		// 1. Rotation
 		// Split the rotation matrix into the X, Y, and Z rotations
 		a3real4x4 rotX, rotY, rotZ;
-		a3real4x4SetIdentity(rotX);
-		a3real4x4SetIdentity(rotY);
-		a3real4x4SetIdentity(rotZ);
+		a3real4x4SetIdentity(&rotX);
+		a3real4x4SetIdentity(&rotY);
+		a3real4x4SetIdentity(&rotZ);
 		if (channel & a3poseChannel_rotate_x)
-			a3real4x4SetRotateX(rotX, a3trigValid_sind(spatialPose->rotate.x));
+			a3real4x4SetRotateX(&rotX, spatialPose->rotate.x);
 		if (channel & a3poseChannel_rotate_y)
-			a3real4x4SetRotateY(rotY, a3trigValid_sind(spatialPose->rotate.y));
+			a3real4x4SetRotateY(&rotY, spatialPose->rotate.y);
 		if (channel & a3poseChannel_rotate_z)
-			a3real4x4SetRotateZ(rotZ, a3trigValid_sind(spatialPose->rotate.z));
+			a3real4x4SetRotateZ(&rotZ, spatialPose->rotate.z);
 
 		// Recombine the split rotation matrices into one
 		switch (order)
@@ -120,9 +120,7 @@ a3i32 a3spatialPoseConvert(a3_SpatialPose* spatialPose, const a3_SpatialPoseChan
 		}
 		}
 
-		// Concatenate the matrices
-		a3real4x4ConcatL(scale, rotation);
-		a3real4x4ConcatL(&spatialPose->transformMat.m[3], scale);
+		// 2. Translation
 		a3real3Add(spatialPose->transformMat.m[3], spatialPose->translate.v);
 
 		// **** DO THIS EVERYWHERE IN THIS FILE:

@@ -384,7 +384,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 			maxLineSize = 512
 		};
 
-		a3i32 currentSegmentIndex = 0;
+		a3i32 segmentCount = 0;
 		a3i32 numFrames = 0;
 		a3i32 numSegments = 0;
 		a3i32 parsedPoseCount = 0; // for checking
@@ -440,8 +440,8 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 					// Initialize our outputs based on the header information (the hierarchy & group based on numFrames, numSegments)
 
 					// 1. Check to make sure we're within boundsj
-					if (currentSegmentIndex >= maxSegNames) {
-						printf("Too many segments! Array must be resized to support %d\n", currentSegmentIndex);
+					if (segmentCount >= maxSegNames) {
+						printf("Too many segments! Array must be resized to support %d\n", segmentCount);
 						return -1;
 					}
 
@@ -501,7 +501,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 						segmentName[segmentNameLength - 2] = '\0';
 
 						currentSegmentIndex = -1;
-						for (a3i32 i = 0; i < currentSegmentIndex; i++)
+						for (a3i32 i = 0; i < segmentCount; i++)
 						{
 							if (strcmp(hierarchy_out->nodes[i].name, segmentName) == 0)
 							{
@@ -542,7 +542,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 
 				// Find segment index
 				a3i32 segmentIndex = -1;
-				for (a3i32 i = 0; i < currentSegmentIndex; i++) 
+				for (a3i32 i = 0; i < segmentCount; i++) 
 				{
 					if (strcmp(hierarchy_out->nodes[i].name, segName) == 0) 
 					{
@@ -689,16 +689,16 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 								parentIndex = (int)j;
 					}
 
-					a3ret ret = a3hierarchySetNode(hierarchy_out, currentSegmentIndex, parentIndex, segmentName);
-					poseGroup_out->order[currentSegmentIndex] = eulerOrder;
-					poseGroup_out->channel[currentSegmentIndex] = a3poseChannel_rotate_xyz | a3poseChannel_scale_xyz | a3poseChannel_translate_xyz | a3poseChannel_user_xyz;
+					a3ret ret = a3hierarchySetNode(hierarchy_out, segmentCount, parentIndex, segmentName);
+					poseGroup_out->order[segmentCount] = eulerOrder;
+					poseGroup_out->channel[segmentCount] = a3poseChannel_rotate_xyz | a3poseChannel_scale_xyz | a3poseChannel_translate_xyz | a3poseChannel_user_xyz;
 
 					if (ret == -1)
 					{
 						printf("Error trying to set node\n");
 					}
 
-					currentSegmentIndex++;
+					segmentCount++;
 					word = strtok(NULL, " \t\n\r");
 					blockWordNumber++;
 					continue;
@@ -712,7 +712,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 		fclose(fp);
 
 		printf("HTR loading completed!\n\n");
-		printf("Parsed (real) segment count: %d\n", currentSegmentIndex);
+		printf("Parsed (real) segment count: %d\n", segmentCount);
 		printf("Parsed (real) pose count: %d\n", parsedPoseCount);
 		printf("----------------- HTR LOADING FINISHED ---------------\n");
 		return 1;
