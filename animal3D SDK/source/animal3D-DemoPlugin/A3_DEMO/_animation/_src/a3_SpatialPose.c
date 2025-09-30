@@ -54,18 +54,19 @@ a3i32 a3spatialPoseConvert(a3_SpatialPose* spatialPose, const a3_SpatialPoseChan
 //****TO-DO-ANIM-PROJECT-2: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
-		a3real4x4 translation, rotation, scale;
-		a3real4x4SetIdentity(translation);
+		a3real4x4 rotation, scale;
+		a3real4x4 rotX, rotY, rotZ;
+
+		// Initialize all values to be the identity matrix
 		a3real4x4SetIdentity(rotation);
 		a3real4x4SetIdentity(scale);
 		a3real4x4SetIdentity(spatialPose->transformMat.m);
 
-		// 1. Rotation
-		// Split the rotation matrix into the X, Y, and Z rotations
-		a3real4x4 rotX, rotY, rotZ;
 		a3real4x4SetIdentity(rotX);
 		a3real4x4SetIdentity(rotY);
 		a3real4x4SetIdentity(rotZ);
+
+		// Ensure we are within a valid angle
 		if (channel & a3poseChannel_rotate_x)
 			a3real4x4SetRotateX(rotX, a3trigValid_sind(spatialPose->rotate.x));
 		if (channel & a3poseChannel_rotate_y)
@@ -73,6 +74,7 @@ a3i32 a3spatialPoseConvert(a3_SpatialPose* spatialPose, const a3_SpatialPoseChan
 		if (channel & a3poseChannel_rotate_z)
 			a3real4x4SetRotateZ(rotZ, a3trigValid_sind(spatialPose->rotate.z));
 
+		// We need to switch over and combine in different orders based on our eulerOrder enum value
 		// Recombine the split rotation matrices into one
 		switch (order)
 		{
@@ -128,27 +130,10 @@ a3i32 a3spatialPoseConvert(a3_SpatialPose* spatialPose, const a3_SpatialPoseChan
 		if (channel & a3poseChannel_scale_y)
 			scale[2][2] = spatialPose->scale.z;
 
-		// 3. Translation
-		if (channel & a3poseChannel_translate_x)
-			translation[3][0] = spatialPose->translate.x;
-		if (channel & a3poseChannel_translate_y)
-			translation[3][1] = spatialPose->translate.y;
-		if (channel & a3poseChannel_translate_z)
-			translation[3][2] = spatialPose->translate.z;
-
-		// tests
-		//a3real4x4SetRotateZYX(rotation, a3trigValid_sind(spatialPose->rotate.x), a3trigValid_sind(spatialPose->rotate.y), a3trigValid_sind(spatialPose->rotate.z));
-
-		// Concatenate the matrices
-		//a3real4x4ConcatL(scale, rotation);
-		//a3real4x4ConcatL(translation, scale);
+		// Finally, concatenate in the correct order and add to the translation matrix
 		a3real4x4ConcatL(spatialPose->transformMat.m, scale);
 		a3real4x4ConcatL(spatialPose->transformMat.m, rotation);
 		a3real3Add(spatialPose->transformMat.m[3], spatialPose->translate.v);
-		//a3real4x4ConcatL(spatialPose->transformMat.m, translation);
-
-		// **** DO THIS EVERYWHERE IN THIS FILE:
-		// -> make sure rotation angles are within [-360, +360] a3trigValid_sind
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-2
