@@ -127,7 +127,7 @@ a3i32 a3spatialPoseConvert(a3_SpatialPose* spatialPose, const a3_SpatialPoseChan
 			scale[0][0] = spatialPose->scale.x;
 		if (channel & a3poseChannel_scale_y)
 			scale[1][1] = spatialPose->scale.y;
-		if (channel & a3poseChannel_scale_y)
+		if (channel & a3poseChannel_scale_z)
 			scale[2][2] = spatialPose->scale.z;
 
 		// Finally, concatenate in the correct order and add to the translation matrix
