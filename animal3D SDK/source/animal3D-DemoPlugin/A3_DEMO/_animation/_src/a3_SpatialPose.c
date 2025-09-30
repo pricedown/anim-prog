@@ -144,7 +144,8 @@ a3i32 a3spatialPoseConvert(a3_SpatialPose* spatialPose, const a3_SpatialPoseChan
 		//a3real4x4ConcatL(translation, scale);
 		a3real4x4ConcatL(spatialPose->transformMat.m, scale);
 		a3real4x4ConcatL(spatialPose->transformMat.m, rotation);
-		a3real4x4ConcatL(spatialPose->transformMat.m, translation);
+		a3real3Add(spatialPose->transformMat.m[3], spatialPose->translate.v);
+		//a3real4x4ConcatL(spatialPose->transformMat.m, translation);
 
 		// **** DO THIS EVERYWHERE IN THIS FILE:
 		// -> make sure rotation angles are within [-360, +360] a3trigValid_sind
