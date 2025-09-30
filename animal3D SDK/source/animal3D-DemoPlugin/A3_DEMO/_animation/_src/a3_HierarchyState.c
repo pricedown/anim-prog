@@ -435,12 +435,15 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 			if (word[0] == '[') 
 			{
 				// Handle switching between blocks
+
+				// Handle switching out of header
 				if (currentBlock == Header)
 				{
-					// Initialize our outputs based on the header information (the hierarchy & group based on numFrames, numSegments)
+					// Initialize based on the header information (the hierarchy & group based on numFrames, numSegments)
 
 					// 1. Check to make sure we're within boundsj
-					if (segmentCount >= maxSegNames) {
+					if (segmentCount >= maxSegNames) 
+					{
 						printf("Too many segments! Array must be resized to support %d\n", segmentCount);
 						return -1;
 					}
@@ -452,8 +455,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 						printf("Failed creating a hierarchy\n");
 						return -1;
 					}
-					else
-						printf("Hierarchy created with %d nodes\n", (int)ret);
+					printf("Hierarchy created with %d nodes\n", (int)ret);
 
 					// 3. Create the hierarchy group
 					ret = a3hierarchyPoseGroupCreate(poseGroup_out, hierarchy_out, numFrames);
@@ -462,31 +464,22 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 						printf("Failed creating a hierarchy pose group\n");
 						return -1;
 					}
-					else
-						printf("Hierarchy pose group created\n");
-
-					if (eulerOrder == -1)
-					{
-						printf("Euler order wasn't detected!\n");
-						return -1;
-					}
+					printf("Hierarchy pose group created\n");
 				}
 
-				// First block, should be the first word in the file
+				// 1. Header, should be the first word in the file
 				if (strcmp(word, "[Header]") == 0)
 					currentBlock = Header;
 
-				// Second block that declares the hierarchy parent relationships of segments / nodes / joints
-				else if (strcmp(word, "[SegmentNames&Hierarchy]") == 0) {
+				// 2. Block that declares the hierarchy parent relationships of segments / nodes / joints
+				else if (strcmp(word, "[SegmentNames&Hierarchy]") == 0)
 					currentBlock = SegmentNameAndHierarchy;
 
-				}
-
-				// Third block that sets the base position of each segments / nodes / limbs
+				// 3. Third block that sets the base position of each segments / nodes / limbs
 				else if (strcmp(word, "[BasePosition]") == 0)
 					currentBlock = BasePosition;
 
-				// The rest of the blocks are for each segment, which define the position for each frame
+				// 4. The rest of the blocks are for each segment, which define the position for each frame
 				else
 				{
 					// We're in a segment's pose block, such as [Hips]
@@ -590,12 +583,11 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 				}
 
 				a3i32 poseIndex = (frameIndex - 1) * numSegments + currentSegmentIndex;
-				
 				//a3spatialPoseSetScale(&poseGroup_out->pose[poseIndex], scale, scale, scale);
 				a3spatialPoseSetRotation(&poseGroup_out->pose[poseIndex], rx, ry, rz);
 				a3spatialPoseSetTranslation(&poseGroup_out->pose[poseIndex], globalScale * tx, globalScale * ty, globalScale * tz);
-
 				parsedPoseCount++;
+
 				lineNumber++;
 				blockWordNumber = 0;
 				continue;
@@ -668,7 +660,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 						case ScaleFactor: {
 							scaleFactor = strtof(word, NULL);
 							globalScale = scaleFactor * (100.0f / 1000.0f);
-							globalScale = 0; // TODO: fix scale
+							//globalScale = 0; // TODO: fix scale
 							break;
 						}
 					}

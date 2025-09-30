@@ -113,8 +113,8 @@ void a3animation_update_animation_skeletal(
 	// resolve final state
 	// copy FK result
 	a3hierarchyPoseCopy(activeHS->animPose,	// dst: IK anim
-		activeHS_fk->animPose,				// src: FK anim
-	//	baseHS->animPose,					// src test: base anim (identity)
+		//activeHS_fk->animPose,				// src: FK anim
+		baseHS->animPose,					// src test: base anim (identity)
 		activeHS_fk->hierarchy->numNodes);
 
 	// finally, rerun FK pipeline (skinning optional)
