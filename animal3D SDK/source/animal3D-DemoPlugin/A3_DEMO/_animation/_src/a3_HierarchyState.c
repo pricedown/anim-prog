@@ -523,12 +523,12 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 			if (currentBlock == BasePosition) 
 			{
 				// Parse the lines of base position data
-
 				char segName[64];
 				a3real tx, ty, tz, rx, ry, rz;
 				a3i32 parsed = sscanf(originalLine, "%63s %f %f %f %f %f %f",
 					segName, &tx, &ty, &tz, &rx, &ry, &rz);
-				if (parsed != 7) {
+				if (parsed != 7) 
+				{
 					printf("Failed to parse BasePosition line: %s\n", originalLine);
 					return -1;
 				}
@@ -551,8 +551,9 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 
 				// Set translation, rotation, and scale of base pose
 				//a3SpacialPoseSetScale(&poseGroup_out->hpose[segmentIndex].hpose_base, sf);
-				a3spatialPoseSetRotation(poseGroup_out->hpose[segmentIndex].hpose_base, tx, ty, tz);
-				a3spatialPoseSetTranslation(poseGroup_out->hpose[segmentIndex].hpose_base, globalScale * tx, globalScale * ty, globalScale * tz);
+			
+				a3spatialPoseSetRotation(&poseGroup_out->pose[segmentIndex], rx, ry, rz);
+				a3spatialPoseSetTranslation(&poseGroup_out->pose[segmentIndex], globalScale * tx, globalScale * ty, globalScale * tz);
 
 				lineNumber++;
 				continue;
@@ -612,7 +613,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 						// Number of body parts / joints
 						a3i32 wordInt = (int)strtol(word, NULL, 10);
 						numSegments = wordInt;
-						poseGroup_out->hposeCount = wordInt; // causing crash
+						poseGroup_out->hposeCount = wordInt;
 
 						printf("NumSegments = %d\n", numSegments);
 						break;
@@ -622,7 +623,7 @@ a3i32 a3hierarchyPoseGroupLoadHTR(a3_HierarchyPoseGroup* poseGroup_out, a3_Hiera
 						// Number of frames across all animations
 						a3i32 wordInt = (int)strtol(word, NULL, 10);
 						numFrames = wordInt;
-						poseGroup_out->poseCount = numFrames * numSegments; // causing crash
+						poseGroup_out->poseCount = numFrames * numSegments;
 
 						printf("NumFrames = %d\n", numFrames);
 						break;

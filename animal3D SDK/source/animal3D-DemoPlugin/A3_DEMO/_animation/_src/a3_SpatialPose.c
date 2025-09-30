@@ -137,7 +137,7 @@ a3i32 a3spatialPoseConvert(a3_SpatialPose* spatialPose, const a3_SpatialPoseChan
 			translation[3][2] = spatialPose->translate.z;
 
 		// tests
-		a3real4x4SetRotateZYX(rotation, a3trigValid_sind(spatialPose->rotate.x), a3trigValid_sind(spatialPose->rotate.y), a3trigValid_sind(spatialPose->rotate.z));
+		//a3real4x4SetRotateZYX(rotation, a3trigValid_sind(spatialPose->rotate.x), a3trigValid_sind(spatialPose->rotate.y), a3trigValid_sind(spatialPose->rotate.z));
 
 		// Concatenate the matrices
 		//a3real4x4ConcatL(scale, rotation);
