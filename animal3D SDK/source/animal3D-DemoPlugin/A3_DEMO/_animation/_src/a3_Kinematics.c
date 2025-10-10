@@ -349,10 +349,13 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	a3real3Normalize(sideBasis);
 	a3real3Normalize(upBasis);
 	
-	a3_BasisAxis directionAxis = directionBasis, upAxis = upBasis;
-	a3_Basis orthonormalBasis = a3basisInit(directionAxis, upAxis);
 	a3real4x4 orthonormalBasisMatrix;
-	a3basisToMat4(orthonormalBasisMatrix, orthonormalBasis);
+	a3real4x4Set(orthonormalBasisMatrix,
+		upBasis[0], sideBasis[1], directionBasis[2], 0,
+		upBasis[0], sideBasis[1], directionBasis[2], 0,
+		upBasis[0], sideBasis[1], directionBasis[2], 0,
+		0, 0, 0, 1);
+
 
 	// LAST STEP:
 	// resolve every affected joint:
