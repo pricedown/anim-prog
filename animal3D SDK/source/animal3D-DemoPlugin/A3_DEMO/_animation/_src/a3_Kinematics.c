@@ -261,6 +261,7 @@ void a3kinematicsUpdateHierarchyStateSkin(a3_HierarchyState* activeHS,
 //-----------------------------------------------------------------------------
 
 // helper to resolve single-joint IK after solver
+// This is done at the end of a3kinematicsUpdateLookAtIK
 static void a3kinematicsResolvePostIK(a3_HierarchyState* activeHS,
 	a3_HierarchyState const* baseHS, a3_HierarchyPoseGroup const* poseGroup,
 	a3ui32 const nodeIndex, a3real4x4 const j2obj)
@@ -275,19 +276,37 @@ static void a3kinematicsResolvePostIK(a3_HierarchyState* activeHS,
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
+	// j2obj - joint to object (a3real4x4 is an array. to set it we need to a3SetReal4x4)
 
+	// anytime you do IK, you're going backwards. you know the solution in forward, and you want the local transform that would get you there
+	// we only need to perform IK on one joint at a time
+	
+
+	// basically a copy for a matrix.
+	//a3real4x4SetReal4x4();
+
+	// there's a very similar function in kinematics
+	// just remember this is a single pose, not the whole hierarchy
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-3
 //-----------------------------------------------------------------------------
 }
 
+// the basis describes the mapping of these axes to the actual joint orientation (basis_hierarchyObj) (basis_affected). the basis tells you which axes maps to whcih axes
+// look into the basis class. you will need these functions (a3basisToMat3)
+// ONE CAVEAT!! YOUR LOOK AT TARGET could be cancelled out by if your axes are parallel before the cross product, making your head dissapaear. if they are parallel, the up basis chosen is invalid. so we could choose a different basis such as right, change the order of solving the problem so you still get a valid transformation
+
 void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	a3_HierarchyState* activeHS, a3_HierarchyState const* baseHS, a3_HierarchyPoseGroup const* poseGroup,
 	a3ui32 const sceneGraphIndex_hierarchyObj, a3ui32 const sceneGraphIndex_effector,
 	a3ui32 const hierarchyObjIndex_affected, a3_Basis const basis_hierarchyObj, a3_Basis const basis_affected)
 {
-	a3mat3 m_hierarchyObj, m_affected;
+
+	// he already gives us the basis. they are already calculataed. they are orientations, we dont have to touch them at all
+	// itsd just a helper utility
+
+	a3mat3 m_hierarchyObj, m_affected; // we use this for our calculations
 	if (!a3basisToMat3(m_hierarchyObj.m, basis_hierarchyObj))
 		return;
 	if (!a3basisToMat3(m_affected.m, basis_affected))
@@ -301,13 +320,32 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 //-----------------------------------------------------------------------------
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
 //-----------------------------------------------------------------------------
+	// FIRST STEP:
+	// -> lookAtTarget
 
 
+	// MAIN STEP:
+	// solver: build an orthonormal basis (joint-to-object)
+	// 1. direction basis = target - joint position
+	// 2. side basis = known up x direction basis
+	// 3. up basis = direction basis x side basis
+	// 4. normalize all (save this step by normalizing first and second) 
+
+
+	// LAST STEP:
+	// resolve every affected joint:
+	// -> 
+	// a3kinematicsResolvePostIK
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-3
 //-----------------------------------------------------------------------------
 }
+//  sceneGraphIndex_hierarchyObj - indices in the scene of the hierarchy
+// sceneGraphIndex_effector - index in the scene of the end effector (wrist)
+// hierarchyObjIndex_affected - index in hierarchy of the affected end join
+// hierarchyObjIndex_affected_base - the base joint of the affected (usually shoulder or hip)
+// a3_Basis is a helper utility provided (has a bunch of functions) - it describes how the object or node in question is actually oriented. you need to know this becuase you need to know the direction you're aiming along (good for look at 30:13) when you build the matrix for look at, follow the basis axis. if the characters head is pointing in the wrong direction, take another look at the basis. The matrix itself is just a bunch of vectors. 
 
 void a3kinematicsUpdateLimbIK(a3_HierarchyState const* sceneGraphState,
 	a3_HierarchyState* activeHS, a3_HierarchyState const* baseHS, a3_HierarchyPoseGroup const* poseGroup,
@@ -330,11 +368,51 @@ void a3kinematicsUpdateLimbIK(a3_HierarchyState const* sceneGraphState,
 		(activeHS->hierarchy != poseGroup->hierarchy))
 		return;
 	
+	// this one is more complicated than look at, refer to slide deck for walk through and possible implementation
+	
 //-----------------------------------------------------------------------------
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
+	// WE HAVE THE WHOLE SCENE
+	// from the sceneGraphState, you use the a3ui32 indices
+	// effector is the node thaat moves around
+	// sceneGraphIndex_hierarchyObj - the index of the hierarchy in the scenee
+	// 
+	// the target needs to be in the right space. we'd be doign a lot of extra work for doing it in world space
+	// make every piece of the problem relative to the hierarchy, making it the center of the universe
 
+	// FIRST STEP:
+	// transform everything into the space of the skeleton / hierarchy (use the inverse function we've been using)
+	// we need it in this space because its the same space forward kinematics is ultimately solved in
+	// you have an effector, constraints, etc, move it into the skeletons space (same space as forward kinematic solution)
+	// transform everything into the space of the skeleton / hierarchy
+
+	// MAIN STEP:
+		// - IMPLEMENTATION NOTES - 
+	// solve joint to object for end, hinge, base
+	// -> end position*
+	// -> hinge position*
+	// ONE THING: you have to check if the target is too far away because you could have a hyper extention. if its too far away, your problem is solved its a straight line ur done
+	// 1. base joint to end effector vector (and distance)
+	// 2. base joint to pole vector constraint - oyu need to map the arm triangle to the imaginary plane of the pole vector
+	//		- geometric solution (describeed in the slides, walks through step by step)
+	//		- algebraic solution
+	//		- either way, you need the planes normal
+	// 3. plane normal = cross product of step 1 and 2 (base to pole) x (base to end)
+	// 4. geometric (Heron's formula) or algebraic (law of cosines)
+		// -> solves elbow position
+	// 5. "look at" solves shoulder and elbow rotations
+	// DONT OVER THINK IT ITS NOT THAT MANY LINES OF CODE smiles :)
+	// 
+
+
+	// LAST STEP:
+	// resolve every affected joint:
+	// -> because each joint depends on the parent, you need to start closer to the root and then down. ORDER MATTERS!
+	// a3kinematicsResolvePostIK
+	// a3kinematicsResolvePostIK
+	// a3kinematicsResolvePostIK
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-3
