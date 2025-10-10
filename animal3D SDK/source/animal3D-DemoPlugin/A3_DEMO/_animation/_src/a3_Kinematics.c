@@ -322,12 +322,18 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 //-----------------------------------------------------------------------------
 	// FIRST STEP:
 	// -> lookAtTarget
-	a3real3x3 lookAt, lookAtInv;
+	a3real3x3 lookAt;
 	a3real3 worldUp = { 0, 1, 0 }; 
 	a3vec4 target = sceneGraphState->objectSpace[sceneGraphIndex_effector].hpose_base->translate;
 	a3vec4 jointPos = poseGroup->hpose[hierarchyObjIndex_affected].hpose_base->translate;
 
-	a3real3x3MakeLookAt(lookAt, lookAtInv, &m_affected, &target, worldUp);
+	// dont change the effector at all. you're either taking the effector into the hierarchy, or youre taking the affected
+	// positions are the fourth column of the transformation matrix
+	// our target effector in hierarchy / object space
+	// we need to move target from world to hierarchy
+	a3real3 effectorHierarchySpace;
+	a3real3ProductComp(effectorHierarchySpace, jointPos.v, target.v);
+	a3real3x3MakeLookAt(lookAt, 0, effectorHierarchySpace, target.v, worldUp);
 
 	// MAIN STEP:
 	// solver: build an orthonormal basis (joint-to-object)
@@ -337,7 +343,7 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 
 	// 1. direction basis = target - joint position
 	a3real3Set(directionBasis, target.x, target.y, target.z);
-	a3real3Sub(directionBasis, &jointPos);
+	a3real3Sub(directionBasis, jointPos.v);
 
 	// 2. side basis = known up x direction basis
 	a3real3Cross(sideBasis, worldUp, directionBasis);
