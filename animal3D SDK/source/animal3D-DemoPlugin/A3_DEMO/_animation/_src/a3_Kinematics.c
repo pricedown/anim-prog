@@ -330,14 +330,14 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	a3mat4 rig2hierarchy = sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat;
 	
 	// this is not written by buckstein, may be wrong
-	a3mat4 pWorldEffector = poseGroup->hpose->hpose_base[sceneGraphIndex_effector].transformMat;
+	a3vec4 pWorldEffector = poseGroup->hpose->hpose_base[sceneGraphIndex_effector].transformMat.v3;
 
 	// dont change the effector at all. you're either taking the effector into the hierarchy, or youre taking the affected
 	// positions are the fourth column of the transformation matrix
 	// our target effector in hierarchy / object space
 	// we need to move target from world to hierarchy
 	a3real4 effectorHierarchySpace;
-	a3real4TransformProduct(effectorHierarchySpace, rig2hierarchy.v, pWorldEffector.v); // use this, not product comp
+	a3real4TransformProduct(effectorHierarchySpace, rig2hierarchy.m, pWorldEffector.v); // use this, not product comp
 
 	//a3real3ProductComp(effectorHierarchySpace, jointPos.v, target.v);
 	a3real3x3MakeLookAt(lookAt, 0, effectorHierarchySpace, pWorldEffector.v, worldUp);
@@ -349,7 +349,8 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	a3real3 upBasis;
 
 	// 1. direction basis = target - joint position
-	a3real3SetReal3(directionBasis, rig2hierarchy.v);
+	//a3real3SetReal3(directionBasis, rig2hierarchy.m); // wrong function, should be a copy
+	directionBasis = rig2hierarchy.v3;
 	a3real3Sub(directionBasis, effectorHierarchySpace);
 
 	// 2. side basis = known up x direction basis
