@@ -324,16 +324,23 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	// -> lookAtTarget
 	a3real3x3 lookAt;
 	a3real3 worldUp = { 0, 1, 0 }; 
-	a3vec4 target = sceneGraphState->objectSpace[sceneGraphIndex_effector].hpose_base->translate;
-	a3vec4 jointPos = poseGroup->hpose[hierarchyObjIndex_affected].hpose_base->translate;
+
+	// these are BOTH buckstein approved. there's two here because there's two different ways of going about it
+	//a3mat4 hierachy2rig = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_hierarchyObj].transformMat;
+	a3mat4 rig2hierarchy = sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat;
+	
+	// this is not written by buckstein, may be wrong
+	a3mat4 pWorldEffector = poseGroup->hpose->hpose_base[sceneGraphIndex_effector].transformMat;
 
 	// dont change the effector at all. you're either taking the effector into the hierarchy, or youre taking the affected
 	// positions are the fourth column of the transformation matrix
 	// our target effector in hierarchy / object space
 	// we need to move target from world to hierarchy
-	a3real3 effectorHierarchySpace;
-	a3real3ProductComp(effectorHierarchySpace, jointPos.v, target.v);
-	a3real3x3MakeLookAt(lookAt, 0, effectorHierarchySpace, target.v, worldUp);
+	a3real4 effectorHierarchySpace;
+	a3real4TransformProduct(effectorHierarchySpace, rig2hierarchy.v, pWorldEffector.v); // use this, not product comp
+
+	//a3real3ProductComp(effectorHierarchySpace, jointPos.v, target.v);
+	a3real3x3MakeLookAt(lookAt, 0, effectorHierarchySpace, pWorldEffector.v, worldUp);
 
 	// MAIN STEP:
 	// solver: build an orthonormal basis (joint-to-object)
@@ -342,8 +349,8 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	a3real3 upBasis;
 
 	// 1. direction basis = target - joint position
-	a3real3Set(directionBasis, target.x, target.y, target.z);
-	a3real3Sub(directionBasis, jointPos.v);
+	a3real3SetReal3(directionBasis, rig2hierarchy.v);
+	a3real3Sub(directionBasis, effectorHierarchySpace);
 
 	// 2. side basis = known up x direction basis
 	a3real3Cross(sideBasis, worldUp, directionBasis);
