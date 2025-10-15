@@ -141,19 +141,18 @@ a3i32 a3kinematicsSolveInversePartial(const a3_HierarchyState* hierarchyState, c
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
-		// NOT copied from class
+		// NOT copied from class. THIS COULD BE WRONG
 		a3ui32 i = firstIndex;
 		for (i; i < nodeCount; ++i)
 		{
 			if (hierarchyState->hierarchy->nodes[i].parentIndex < 0) 
 			{
-				// we are the root
-				a3kinematicsSolveForwardRoot(hierarchyState, hierarchyState->hierarchy->nodes[i].index);
+				a3kinematicsSolveInverseRoot(hierarchyState, hierarchyState->hierarchy->nodes[i].index);
 			}
 			else 
 			{
 				// we are not the root
-				a3kinematicsSolveForwardSingle(hierarchyState,
+				a3kinematicsSolveInverseSingle(hierarchyState,
 					hierarchyState->hierarchy->nodes[i].index,
 					hierarchyState->hierarchy->nodes[i].parentIndex);
 			}
@@ -266,7 +265,7 @@ static void a3kinematicsResolvePostIK(a3_HierarchyState* activeHS,
 	a3_HierarchyState const* baseHS, a3_HierarchyPoseGroup const* poseGroup,
 	a3ui32 const nodeIndex, a3real4x4 const j2obj)
 {
-	// post-IK resolution for single affected joint
+	// post-IK resolutiaon for single affected joint
 	//	-> reassign resolved transform to object-space
 	//	-> compute object-space inverse matrix
 	//	-> compute local-space matrix
@@ -276,11 +275,38 @@ static void a3kinematicsResolvePostIK(a3_HierarchyState* activeHS,
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
-	// j2obj - joint to object (a3real4x4 is an array. to set it we need to a3SetReal4x4)
+	// for joe <3
+	// how are you doing? i am well
+	// there is a function that is eerily similar to this
+	// like the last 2 lines i think
+	// just like change it
+	// apparently this is like 4 lines
 
+	//a3vec4 pWorldAffected = poseGroup->hpose->hpose_base[nodeIndex].transformMat.v3;
+	
+	a3real4x4 m;
+	a3real4x4SetReal4x4(m, j2obj);
+	a3real4x4Invert(m);
+	a3real4x4SetReal4x4(activeHS->localSpace->hpose_base[nodeIndex].transformMat.m, j2obj);
+	a3real4x4SetReal4x4(activeHS->localSpaceInv->hpose_base[nodeIndex].transformMat.m, m);
+
+	a3kinematicsSolveInversePartial(activeHS, nodeIndex, activeHS->hierarchy->numNodes);
+	a3spatialPoseRestore(
+		activeHS->localSpace->hpose_base + nodeIndex,
+		poseGroup->channel[nodeIndex],
+		poseGroup->order[nodeIndex]
+	);
+	a3spatialPoseDeconcat(
+		activeHS->animPose->hpose_base + nodeIndex,
+		activeHS->localSpace->hpose_base + nodeIndex,
+		baseHS->localSpace->hpose_base + nodeIndex
+	);
+
+
+	// j2obj - joint to object (a3real4x4 is an array. to set it we need to a3SetReal4x4)
+		
 	// anytime you do IK, you're going backwards. you know the solution in forward, and you want the local transform that would get you there
 	// we only need to perform IK on one joint at a time
-	
 
 	// basically a copy for a matrix.
 	//a3real4x4SetReal4x4();
@@ -338,8 +364,6 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	// we need to move target from world to hierarchy
 	a3real4 effectorHierarchySpace;
 	a3real4TransformProduct(effectorHierarchySpace, rig2hierarchy.m, pWorldEffector.v); // use this, not product comp
-
-	//a3real3ProductComp(effectorHierarchySpace, jointPos.v, target.v);
 	a3real3x3MakeLookAt(lookAt, 0, effectorHierarchySpace, pWorldEffector.v, worldUp);
 
 	// MAIN STEP:
@@ -368,11 +392,10 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	
 	a3real4x4 orthonormalBasisMatrix;
 	a3real4x4Set(orthonormalBasisMatrix,
-		upBasis[0], sideBasis[1], directionBasis[2], 0,
-		upBasis[0], sideBasis[1], directionBasis[2], 0,
-		upBasis[0], sideBasis[1], directionBasis[2], 0,
-		0, 0, 0, 1);
-
+		upBasis[0], upBasis[1], upBasis[2], 0,
+		sideBasis[0], sideBasis[1], sideBasis[2], 0,
+		directionBasis[0], directionBasis[1], directionBasis[2], 0,
+		effectorHierarchySpace[0], effectorHierarchySpace[1], effectorHierarchySpace[2], 1);
 
 	// LAST STEP:
 	// resolve every affected joint:
