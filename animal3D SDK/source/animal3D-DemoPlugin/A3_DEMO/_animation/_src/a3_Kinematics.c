@@ -260,11 +260,12 @@ void a3kinematicsUpdateHierarchyStateSkin(a3_HierarchyState* activeHS,
 
 //-----------------------------------------------------------------------------
 
-// helper to resolve single-joint IK after solver
+// Helper to resolve single-joint IK after solver
 // This is done at the end of a3kinematicsUpdateLookAtIK
+// Similar perhaps to updateHierarchyStateFK and updateHierarchyStateSkin 
 static void a3kinematicsResolvePostIK(a3_HierarchyState* activeHS,
 	a3_HierarchyState const* baseHS, a3_HierarchyPoseGroup const* poseGroup,
-	a3ui32 const nodeIndex, a3real4x4 const j2obj)
+	a3ui32 const nodeIndex, a3real4x4 const j2obj /*joint to object*/)
 {
 	// post-IK resolution for single affected joint
 	//	-> reassign resolved transform to object-space
@@ -275,6 +276,7 @@ static void a3kinematicsResolvePostIK(a3_HierarchyState* activeHS,
 //-----------------------------------------------------------------------------
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
 //-----------------------------------------------------------------------------
+	a3vec4 pWorldAffected = poseGroup->hpose->hpose_base[nodeIndex].transformMat.v3;
 
 	// j2obj - joint to object (a3real4x4 is an array. to set it we need to a3SetReal4x4)
 
@@ -340,7 +342,7 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	a3real4TransformProduct(effectorHierarchySpace, rig2hierarchy.m, pWorldEffector.v); // use this, not product comp
 
 	//a3real3ProductComp(effectorHierarchySpace, jointPos.v, target.v);
-	a3real3x3MakeLookAt(lookAt, 0, effectorHierarchySpace, pWorldEffector.v, worldUp);
+	a3real3x3MakeLookAt(lookAt, 0, effectorHierarchySpace, pWorldEffector.v, worldUp); // TODO: these are in different spaces, valid?
 
 	// MAIN STEP:
 	// solver: build an orthonormal basis (joint-to-object)
@@ -368,16 +370,13 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	
 	a3real4x4 orthonormalBasisMatrix;
 	a3real4x4Set(orthonormalBasisMatrix,
-		upBasis[0], sideBasis[1], directionBasis[2], 0,
-		upBasis[0], sideBasis[1], directionBasis[2], 0,
-		upBasis[0], sideBasis[1], directionBasis[2], 0,
-		0, 0, 0, 1);
-
+		upBasis[0], upBasis[1], upBasis[2], 0,
+		sideBasis[0], sideBasis[1], sideBasis[2], 0,
+		directionBasis[0], directionBasis[1], directionBasis[2], 0,
+		effectorHierarchySpace[0], effectorHierarchySpace[1],effectorHierarchySpace[2], 1);
 
 	// LAST STEP:
 	// resolve every affected joint:
-	// -> 
-	// a3kinematicsResolvePostIK
 	a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected, orthonormalBasisMatrix);
 
 //-----------------------------------------------------------------------------
