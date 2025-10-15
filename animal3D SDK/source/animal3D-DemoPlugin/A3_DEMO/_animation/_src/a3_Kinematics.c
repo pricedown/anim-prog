@@ -350,7 +350,10 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 
 	// 1. direction basis = target - joint position
 	//a3real3SetReal3(directionBasis, rig2hierarchy.m); // wrong function, should be a copy
-	directionBasis = rig2hierarchy.v3;
+	a3vec4 directionBasisVec = rig2hierarchy.v3;
+	directionBasis[0] = directionBasisVec.x;
+	directionBasis[1] = directionBasisVec.y;
+	directionBasis[2] = directionBasisVec.z;
 	a3real3Sub(directionBasis, effectorHierarchySpace);
 
 	// 2. side basis = known up x direction basis
