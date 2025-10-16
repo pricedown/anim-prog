@@ -286,8 +286,9 @@ static void a3kinematicsResolvePostIK(a3_HierarchyState* activeHS,
 
 	//a3vec4 pWorldAffected = poseGroup->hpose->hpose_base[nodeIndex].transformMat.v3;
 
-	a3real4x4Product(activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m, activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m, j2obj);
-	a3real4x4GetInverse(activeHS->objectSpaceInv->hpose_base[nodeIndex].transformMat.m, activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m);
+	a3real4x4SetReal4x4(activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m, j2obj);
+	//a3real4x4Product(activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m, activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m, j2obj);
+	a3real4x4TransformInverse(activeHS->objectSpaceInv->hpose_base[nodeIndex].transformMat.m, activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m);
 
 	//a3real4x4 m;
 	//a3real4x4SetReal4x4(m, j2obj);
@@ -357,6 +358,7 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	// these are BOTH buckstein approved. there's two here because there's two different ways of going about it
 	//a3mat4 hierachy2rig = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_hierarchyObj].transformMat;
 	a3mat4 rig2hierarchy = sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat; 
+
 	
 	// Put target (effector) into hierarchy space
 	// this is not written by buckstein, may be wrong
@@ -365,12 +367,12 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	// our target effector in hierarchy / object space
 	// we need to move target from world to hierarchy
 	a3vec4 pWorldEffector = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_effector].transformMat.v3;
-	
+
 	a3vec4 pEffectorHierarchySpace; // our target
 	a3real4TransformProduct(pEffectorHierarchySpace.v, rig2hierarchy.m, pWorldEffector.v); // use this, not product comp
 
 	// Get affected in hierarchy space
-	a3vec4 pAffectedHierarchySpace = activeHS->localSpace->hpose_base[hierarchyObjIndex_affected].transformMat.v3; // our eye
+	a3vec4 pAffectedHierarchySpace = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected].transformMat.v3; // our eye
 
 	// TODO: SECOND STEP: change of basis from world -> affected
 	//a3real4TransformProduct(pEffectorHierarchySpace.v, m_hierarchyObj.m, pEffectorHierarchySpace.v);
@@ -384,6 +386,12 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	// THIRD STEP: Create the lookAt matrix
 	a3real3 worldUp = { 0, 1, 0 }; 
 	a3real4x4MakeLookAt(lookAt, 0, pAffectedHierarchySpace.v, pEffectorHierarchySpace.v, worldUp); // TODO: these are in different spaces, valid?
+	// Trying to transform the rotation of LookAt by the change of basis transformation
+	//a3real3x3 lookAtRot;
+	//a3real3x3SetReal4x4(lookAtRot, lookAt);
+	//a3real3x3Product(lookAtRot, lookAtRot, m_hierarchyObj.m);
+	//a3real3x3Product(lookAtRot, lookAtRot, m_affected.m);
+	//a3real4x4SetReal3x3(lookAt, lookAtRot);
 
 	// LAST STEP: resolve every affected joint:
 	a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected, lookAt);
