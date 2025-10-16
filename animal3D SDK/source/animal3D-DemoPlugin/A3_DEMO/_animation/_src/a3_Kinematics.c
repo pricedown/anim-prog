@@ -287,6 +287,7 @@ static void a3kinematicsResolvePostIK(a3_HierarchyState* activeHS,
 	//a3vec4 pWorldAffected = poseGroup->hpose->hpose_base[nodeIndex].transformMat.v3;
 
 	a3real4x4Product(activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m, activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m, j2obj);
+	a3real4x4GetInverse(activeHS->objectSpaceInv->hpose_base[nodeIndex].transformMat.m, activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m);
 
 	//a3real4x4 m;
 	//a3real4x4SetReal4x4(m, j2obj);
@@ -294,7 +295,8 @@ static void a3kinematicsResolvePostIK(a3_HierarchyState* activeHS,
 	//a3real4x4SetReal4x4(activeHS->localSpace->hpose_base[nodeIndex].transformMat.m, j2obj);
 	//a3real4x4SetReal4x4(activeHS->localSpaceInv->hpose_base[nodeIndex].transformMat.m, m);
 
-	a3kinematicsSolveInversePartial(activeHS, nodeIndex, activeHS->hierarchy->numNodes);
+	a3kinematicsSolveInverseSingle(activeHS, nodeIndex, activeHS->hierarchy->nodes[nodeIndex].parentIndex);
+	//a3kinematicsSolveInversePartial(activeHS, nodeIndex, activeHS->hierarchy->numNodes);
 	a3spatialPoseRestore(
 		activeHS->localSpace->hpose_base + nodeIndex,
 		poseGroup->channel[nodeIndex],
@@ -373,8 +375,11 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	// TODO: SECOND STEP: change of basis from world -> affected
 	//a3real4TransformProduct(pEffectorHierarchySpace.v, m_hierarchyObj.m, pEffectorHierarchySpace.v);
 	//a3real4TransformProduct(pAffectedHierarchySpace.v, m_affected.m, pAffectedHierarchySpace.v);
-	a3real3Real3x3MulL(pEffectorHierarchySpace.v, m_hierarchyObj.m);
-	a3real3Real3x3MulL(pAffectedHierarchySpace.v, m_hierarchyObj.m);
+	//a3real3x3Invert(m_hierarchyObj.m);
+	//a3real3Real3x3MulL(pEffectorHierarchySpace.v, m_hierarchyObj.m);
+	//a3real3Real3x3MulL(pEffectorHierarchySpace.v, m_affected.m);
+	//a3real3Real3x3MulL(pAffectedHierarchySpace.v, m_affected.m);
+	//a3real3Real3x3MulL(pAffectedHierarchySpace.v, m_hierarchyObj.m);
 
 	// THIRD STEP: Create the lookAt matrix
 	a3real3 worldUp = { 0, 1, 0 }; 
