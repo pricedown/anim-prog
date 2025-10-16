@@ -331,9 +331,7 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	a3ui32 const hierarchyObjIndex_affected, a3_Basis const basis_hierarchyObj, a3_Basis const basis_affected)
 {
 
-	// he already gives us the basis. they are already calculataed. they are orientations, we dont have to touch them at all
-	// itsd just a helper utility
-
+	// transform basis helper utility into respective matrices
 	a3mat3 m_hierarchyObj, m_affected; // we use this for our calculations
 	if (!a3basisToMat3(m_hierarchyObj.m, basis_hierarchyObj))
 		return;
@@ -348,62 +346,44 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 //-----------------------------------------------------------------------------
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
 //-----------------------------------------------------------------------------
-	// FIRST STEP:
-	// -> lookAtTarget
-	a3real3x3 lookAt;
-	a3real3 worldUp = { 0, 1, 0 }; 
+	a3real4x4 lookAt;
+	// FIRST STEP: Put everything in a common space
 
+	// We choose hierarchy space for our effector and affected
 	// these are BOTH buckstein approved. there's two here because there's two different ways of going about it
 	//a3mat4 hierachy2rig = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_hierarchyObj].transformMat;
-	a3mat4 rig2hierarchy = sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat;
+	a3mat4 rig2hierarchy = sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat; 
 	
+	// Put target (effector) into hierarchy space
 	// this is not written by buckstein, may be wrong
-	a3vec4 pWorldEffector = poseGroup->hpose->hpose_base[sceneGraphIndex_effector].transformMat.v3;
-
 	// dont change the effector at all. you're either taking the effector into the hierarchy, or youre taking the affected
 	// positions are the fourth column of the transformation matrix
 	// our target effector in hierarchy / object space
 	// we need to move target from world to hierarchy
-	a3real4 effectorHierarchySpace;
-	a3real4TransformProduct(effectorHierarchySpace, rig2hierarchy.m, pWorldEffector.v); // use this, not product comp
-
-	//a3real3ProductComp(effectorHierarchySpace, jointPos.v, target.v);
-	a3real3x3MakeLookAt(lookAt, 0, effectorHierarchySpace, pWorldEffector.v, worldUp); // TODO: these are in different spaces, valid?
-
-	// MAIN STEP:
-	// solver: build an orthonormal basis (joint-to-object)
-	a3real3 directionBasis;
-	a3real3 sideBasis;
-	a3real3 upBasis;
-
-	// 1. direction basis = target - joint position
-	//a3real3SetReal3(directionBasis, rig2hierarchy.m); // wrong function, should be a copy
-	a3vec4 directionBasisVec = rig2hierarchy.v3;
-	directionBasis[0] = directionBasisVec.x;
-	directionBasis[1] = directionBasisVec.y;
-	directionBasis[2] = directionBasisVec.z;
-	a3real3Sub(directionBasis, effectorHierarchySpace);
-
-	// 2. side basis = known up x direction basis
-	a3real3Cross(sideBasis, worldUp, directionBasis);
-	// 3. up basis = direction basis x side basis
-	a3real3Cross(upBasis, directionBasis, sideBasis);
-
-	// 4. normalize all (save this step by normalizing first and second) 
-	a3real3Normalize(directionBasis);
-	a3real3Normalize(sideBasis);
-	a3real3Normalize(upBasis);
+	a3vec4 pWorldEffector = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_effector].transformMat.v3;
 	
-	a3real4x4 orthonormalBasisMatrix;
-	a3real4x4Set(orthonormalBasisMatrix,
-		upBasis[0], upBasis[1], upBasis[2], 0,
-		sideBasis[0], sideBasis[1], sideBasis[2], 0,
-		directionBasis[0], directionBasis[1], directionBasis[2], 0,
-		effectorHierarchySpace[0], effectorHierarchySpace[1],effectorHierarchySpace[2], 1);
+	a3vec4 pEffectorHierarchySpace; // our target
+	a3real4TransformProduct(pEffectorHierarchySpace.v, rig2hierarchy.m, pWorldEffector.v); // use this, not product comp
 
-	// LAST STEP:
-	// resolve every affected joint:
-	a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected, orthonormalBasisMatrix);
+	// Get affected in hierarchy space
+	a3vec4 pAffectedHierarchySpace = activeHS->hpose->hpose_base[hierarchyObjIndex_affected].transformMat.v3; // our eye
+	//pAffectedHierarchySpace.x = 0.0f;
+	//pAffectedHierarchySpace.y = 0.0f;
+	//pAffectedHierarchySpace.z = 0.0f;
+	//pAffectedHierarchySpace.w = 1.0f;
+
+	// TODO: SECOND STEP: change of basis from world -> affected
+	//a3real4TransformProduct(pEffectorHierarchySpace.v, m_hierarchyObj.m, pEffectorHierarchySpace.v);
+	//a3real4TransformProduct(pAffectedHierarchySpace.v, m_affected.m, pAffectedHierarchySpace.v);
+	a3real3Real3x3MulL(pEffectorHierarchySpace.v, m_hierarchyObj.m);
+	a3real3Real3x3MulL(pAffectedHierarchySpace.v, m_hierarchyObj.m);
+
+	// THIRD STEP: Create the lookAt matrix
+	a3real3 worldUp = { 0, 1, 0 }; 
+	a3real4x4MakeLookAt(lookAt, 0, pAffectedHierarchySpace.v, pEffectorHierarchySpace.v, worldUp); // TODO: these are in different spaces, valid?
+
+	// LAST STEP: resolve every affected joint:
+	a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected, lookAt);
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-3
