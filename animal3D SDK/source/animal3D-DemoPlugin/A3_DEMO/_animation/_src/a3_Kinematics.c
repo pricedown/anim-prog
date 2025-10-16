@@ -286,9 +286,26 @@ static void a3kinematicsResolvePostIK(a3_HierarchyState* activeHS,
 
 	//a3vec4 pWorldAffected = poseGroup->hpose->hpose_base[nodeIndex].transformMat.v3;
 
+	//	-> reassign resolved transform to object-space
 	a3real4x4SetReal4x4(activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m, j2obj);
-	//a3real4x4Product(activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m, activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m, j2obj);
+	//	-> compute object-space inverse matrix
 	a3real4x4TransformInverse(activeHS->objectSpaceInv->hpose_base[nodeIndex].transformMat.m, activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m);
+	//	-> compute local-space matrix
+	a3kinematicsSolveInverseSingle(activeHS, nodeIndex, activeHS->hierarchy->nodes[nodeIndex].parentIndex);
+	//	-> restore local-space matrix to pose
+	a3spatialPoseRestore(
+		activeHS->localSpace->hpose_base + nodeIndex,
+		poseGroup->channel[nodeIndex],
+		poseGroup->order[nodeIndex]
+	);
+	//	-> deconcatenate base pose
+	a3spatialPoseDeconcat(
+		activeHS->animPose->hpose_base + nodeIndex,
+		activeHS->localSpace->hpose_base + nodeIndex,
+		baseHS->localSpace->hpose_base + nodeIndex
+	);
+
+	//a3real4x4Product(activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m, activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m, j2obj);
 
 	//a3real4x4 m;
 	//a3real4x4SetReal4x4(m, j2obj);
@@ -296,19 +313,7 @@ static void a3kinematicsResolvePostIK(a3_HierarchyState* activeHS,
 	//a3real4x4SetReal4x4(activeHS->localSpace->hpose_base[nodeIndex].transformMat.m, j2obj);
 	//a3real4x4SetReal4x4(activeHS->localSpaceInv->hpose_base[nodeIndex].transformMat.m, m);
 
-	a3kinematicsSolveInverseSingle(activeHS, nodeIndex, activeHS->hierarchy->nodes[nodeIndex].parentIndex);
 	//a3kinematicsSolveInversePartial(activeHS, nodeIndex, activeHS->hierarchy->numNodes);
-	a3spatialPoseRestore(
-		activeHS->localSpace->hpose_base + nodeIndex,
-		poseGroup->channel[nodeIndex],
-		poseGroup->order[nodeIndex]
-	);
-	a3spatialPoseDeconcat(
-		activeHS->animPose->hpose_base + nodeIndex,
-		activeHS->localSpace->hpose_base + nodeIndex,
-		baseHS->localSpace->hpose_base + nodeIndex
-	);
-
 
 	// j2obj - joint to object (a3real4x4 is an array. to set it we need to a3SetReal4x4)
 		
@@ -347,6 +352,12 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 		(activeHS->hierarchy != baseHS->hierarchy) ||
 		(activeHS->hierarchy != poseGroup->hierarchy))
 		return;
+
+
+	a3mat3 B_affected_inv;
+	a3real3x3GetInverse(B_affected_inv.m, m_affected.m);
+	a3mat3 B_hierarchyObj_inv;
+	a3real3x3GetInverse(B_hierarchyObj_inv.m, m_hierarchyObj.m);
 	
 //-----------------------------------------------------------------------------
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
@@ -359,26 +370,31 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	//a3mat4 hierachy2rig = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_hierarchyObj].transformMat;
 	a3mat4 rig2hierarchy = sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat; 
 
-	
 	// Put target (effector) into hierarchy space
 	// this is not written by buckstein, may be wrong
 	// dont change the effector at all. you're either taking the effector into the hierarchy, or youre taking the affected
 	// positions are the fourth column of the transformation matrix
 	// our target effector in hierarchy / object space
 	// we need to move target from world to hierarchy
-	a3vec4 pWorldEffector = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_effector].transformMat.v3;
+	
+	a3vec4 pWorldEffector = sceneGraphState->objectSpace->hpose_base[sceneGraphIndex_effector].transformMat.v3;
+	//a3real3Real3x3MulL(pWorldEffector.v, B_hierarchyObj_inv.m);
+	//a3real3Real3x3MulL(pWorldEffector.v, m_affected.m);
 
 	a3vec4 pEffectorHierarchySpace; // our target
-	a3real4TransformProduct(pEffectorHierarchySpace.v, rig2hierarchy.m, pWorldEffector.v); // use this, not product comp
+	//a3real4TransformProduct(pEffectorHierarchySpace.v, rig2hierarchy.m, pWorldEffector.v); // use this, not product comp
+	a3real4ProductTransform(pEffectorHierarchySpace.v, pWorldEffector.v, rig2hierarchy.m);
 
 	// Get affected in hierarchy space
 	a3vec4 pAffectedHierarchySpace = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected].transformMat.v3; // our eye
+	//a3real3Real3x3MulL(pAffectedHierarchySpace.v, m_affected.m);
 
 	// TODO: SECOND STEP: change of basis from world -> affected
 	//a3real4TransformProduct(pEffectorHierarchySpace.v, m_hierarchyObj.m, pEffectorHierarchySpace.v);
 	//a3real4TransformProduct(pAffectedHierarchySpace.v, m_affected.m, pAffectedHierarchySpace.v);
 	//a3real3x3Invert(m_hierarchyObj.m);
 	//a3real3Real3x3MulL(pEffectorHierarchySpace.v, m_hierarchyObj.m);
+	//a3real3Real3x3MulL(pAffectedHierarchySpace.v, B_affected_inv.m);
 	//a3real3Real3x3MulL(pEffectorHierarchySpace.v, m_affected.m);
 	//a3real3Real3x3MulL(pAffectedHierarchySpace.v, m_affected.m);
 	//a3real3Real3x3MulL(pAffectedHierarchySpace.v, m_hierarchyObj.m);
@@ -386,19 +402,20 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	// THIRD STEP: Create the lookAt matrix
 	a3real3 worldUp = { 0, 1, 0 }; 
 	a3real4x4MakeLookAt(lookAt, 0, pAffectedHierarchySpace.v, pEffectorHierarchySpace.v, worldUp); // TODO: these are in different spaces, valid?
+
 	// Trying to transform the rotation of LookAt by the change of basis transformation
-	a3mat3 R_lookAt;
-	a3real3x3SetReal4x4(R_lookAt.m, lookAt);
-	a3mat3 R_final;
-	a3real3x3Product(R_final.m, m_hierarchyObj.m, R_lookAt.m);
-	a3mat3 B_affected_inv;
-	a3real3x3Invert(B_affected_inv.m, m_affected.m);
-	a3real3x3Product(R_final.m, R_final.m, B_affected_inv.m);
-	a3real4x4SetReal3x3(lookAt, R_final.m);
+	//a3mat3 R_lookAt;
+	//a3real3x3SetReal4x4(R_lookAt.m, lookAt);
+	//a3mat3 R_final;
+	//a3real3x3Product(R_final.m, m_hierarchyObj.m, R_lookAt.m);
+	//a3mat3 B_affected_inv;
+	//a3real3x3GetInverse(B_affected_inv.m, m_affected.m);
+	//a3real3x3Product(R_final.m, R_final.m, B_affected_inv.m);
+	//a3real4x4SetReal3x3(lookAt, R_final.m);
 	//a3real3x3 lookAtRot;
 	//a3real3x3SetReal4x4(lookAtRot, lookAt);
-	//a3real3x3Product(lookAtRot, lookAtRot, m_hierarchyObj.m);
-	//a3real3x3Product(lookAtRot, lookAtRot, m_affected.m);
+	//a3real3x3ConcatL(lookAtRot, m_affected.m);
+	//a3real3x3ConcatL(lookAtRot, m_hierarchyObj.m);
 	//a3real4x4SetReal3x3(lookAt, lookAtRot);
 
 	// LAST STEP: resolve every affected joint:
@@ -454,18 +471,18 @@ void a3kinematicsUpdateLimbIK(a3_HierarchyState const* sceneGraphState,
 	// we need it in this space because its the same space forward kinematics is ultimately solved in
 	// you have an effector, constraints, etc, move it into the skeletons space (same space as forward kinematic solution)
 	// transform everything into the space of the skeleton / hierarchy
-	a3mat4 rig2hierarchy = sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat;
+	//a3mat4 rig2hierarchy = sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat;
 
-	a3vec4 pEffectorWorld = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_effector_end].transformMat.v3;
-	a3vec4 pPoleWorld = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_constraint].transformMat.v3;
+	//a3vec4 pEffectorWorld = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_effector_end].transformMat.v3;
+	//a3vec4 pPoleWorld = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_constraint].transformMat.v3;
 
-	a3vec4 pTarget, pPole;
-	a3real4TransformProduct(pTarget.v, rig2hierarchy.m, pEffectorWorld.v);
-	a3real4TransformProduct(pPole.v, rig2hierarchy.m, pPoleWorld.v);
+	//a3vec4 pTarget, pPole;
+	//a3real4TransformProduct(pTarget.v, rig2hierarchy.m, pEffectorWorld.v);
+	//a3real4TransformProduct(pPole.v, rig2hierarchy.m, pPoleWorld.v);
 
-	a3vec4 pBase = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected_base].transformMat.v3;
-	a3vec4 pHinge = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected_hinge].transformMat.v3;
-	a3vec4 pEnd = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected_end].transformMat.v3;
+	//a3vec4 pBase = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected_base].transformMat.v3;
+	//a3vec4 pHinge = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected_hinge].transformMat.v3;
+	//a3vec4 pEnd = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected_end].transformMat.v3;
 
 	// MAIN STEP:
 		// - IMPLEMENTATION NOTES - 
