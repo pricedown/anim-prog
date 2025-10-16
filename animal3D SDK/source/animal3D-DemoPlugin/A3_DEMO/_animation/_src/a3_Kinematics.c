@@ -285,12 +285,14 @@ static void a3kinematicsResolvePostIK(a3_HierarchyState* activeHS,
 	// apparently this is like 4 lines
 
 	//a3vec4 pWorldAffected = poseGroup->hpose->hpose_base[nodeIndex].transformMat.v3;
-	
-	a3real4x4 m;
-	a3real4x4SetReal4x4(m, j2obj);
-	a3real4x4Invert(m);
-	a3real4x4SetReal4x4(activeHS->localSpace->hpose_base[nodeIndex].transformMat.m, j2obj);
-	a3real4x4SetReal4x4(activeHS->localSpaceInv->hpose_base[nodeIndex].transformMat.m, m);
+
+	a3real4x4Product(activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m, activeHS->objectSpace->hpose_base[nodeIndex].transformMat.m, j2obj);
+
+	//a3real4x4 m;
+	//a3real4x4SetReal4x4(m, j2obj);
+	//a3real4x4Invert(m);
+	//a3real4x4SetReal4x4(activeHS->localSpace->hpose_base[nodeIndex].transformMat.m, j2obj);
+	//a3real4x4SetReal4x4(activeHS->localSpaceInv->hpose_base[nodeIndex].transformMat.m, m);
 
 	a3kinematicsSolveInversePartial(activeHS, nodeIndex, activeHS->hierarchy->numNodes);
 	a3spatialPoseRestore(
@@ -366,11 +368,7 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	a3real4TransformProduct(pEffectorHierarchySpace.v, rig2hierarchy.m, pWorldEffector.v); // use this, not product comp
 
 	// Get affected in hierarchy space
-	a3vec4 pAffectedHierarchySpace = activeHS->hpose->hpose_base[hierarchyObjIndex_affected].transformMat.v3; // our eye
-	//pAffectedHierarchySpace.x = 0.0f;
-	//pAffectedHierarchySpace.y = 0.0f;
-	//pAffectedHierarchySpace.z = 0.0f;
-	//pAffectedHierarchySpace.w = 1.0f;
+	a3vec4 pAffectedHierarchySpace = activeHS->localSpace->hpose_base[hierarchyObjIndex_affected].transformMat.v3; // our eye
 
 	// TODO: SECOND STEP: change of basis from world -> affected
 	//a3real4TransformProduct(pEffectorHierarchySpace.v, m_hierarchyObj.m, pEffectorHierarchySpace.v);
