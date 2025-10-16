@@ -387,6 +387,14 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	a3real3 worldUp = { 0, 1, 0 }; 
 	a3real4x4MakeLookAt(lookAt, 0, pAffectedHierarchySpace.v, pEffectorHierarchySpace.v, worldUp); // TODO: these are in different spaces, valid?
 	// Trying to transform the rotation of LookAt by the change of basis transformation
+	a3mat3 R_lookAt;
+	a3real3x3SetReal4x4(R_lookAt.m, lookAt);
+	a3mat3 R_final;
+	a3real3x3Product(R_final.m, m_hierarchyObj.m, R_lookAt.m);
+	a3mat3 B_affected_inv;
+	a3real3x3Invert(B_affected_inv.m, m_affected.m);
+	a3real3x3Product(R_final.m, R_final.m, B_affected_inv.m);
+	a3real4x4SetReal3x3(lookAt, R_final.m);
 	//a3real3x3 lookAtRot;
 	//a3real3x3SetReal4x4(lookAtRot, lookAt);
 	//a3real3x3Product(lookAtRot, lookAtRot, m_hierarchyObj.m);
@@ -446,6 +454,18 @@ void a3kinematicsUpdateLimbIK(a3_HierarchyState const* sceneGraphState,
 	// we need it in this space because its the same space forward kinematics is ultimately solved in
 	// you have an effector, constraints, etc, move it into the skeletons space (same space as forward kinematic solution)
 	// transform everything into the space of the skeleton / hierarchy
+	a3mat4 rig2hierarchy = sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat;
+
+	a3vec4 pEffectorWorld = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_effector_end].transformMat.v3;
+	a3vec4 pPoleWorld = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_constraint].transformMat.v3;
+
+	a3vec4 pTarget, pPole;
+	a3real4TransformProduct(pTarget.v, rig2hierarchy.m, pEffectorWorld.v);
+	a3real4TransformProduct(pPole.v, rig2hierarchy.m, pPoleWorld.v);
+
+	a3vec4 pBase = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected_base].transformMat.v3;
+	a3vec4 pHinge = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected_hinge].transformMat.v3;
+	a3vec4 pEnd = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected_end].transformMat.v3;
 
 	// MAIN STEP:
 		// - IMPLEMENTATION NOTES - 
