@@ -375,8 +375,8 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 
 	// FIRST STEP: Put everything in a common space
 	a3real4x4* rig2hierarchy = &sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat.m;
-	a3vec4 hierarchy_affected; // eye of the 
-	a3vec4 hierarchy_effector; // tiger
+	a3vec4 hierarchy_affected;
+	a3vec4 hierarchy_effector;
 	
 	hierarchy_affected = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected].transformMat.v3;
 	a3vec4 rig_effector = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_effector].transformMat.v3;
@@ -384,10 +384,6 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 
 	// SECOND STEP: Create the lookAt matrix
 	a3vec3 worldUp = { 0, 1, 0 }; 
-
-	// use only vector3s for this, cross product can be finnicky with vector4s
-	// dont use make look at, we need to construct the bases manually
-
 	a3vec3 directionBasis;
 	a3vec3 sideBasis;
 	a3vec3 upBasis;
@@ -449,21 +445,44 @@ void a3kinematicsUpdateLimbIK(a3_HierarchyState const* sceneGraphState,
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
-	// WE HAVE THE WHOLE SCENE
-	// from the sceneGraphState, you use the a3ui32 indices
-	// effector is the node thaat moves around
-	// sceneGraphIndex_hierarchyObj - the index of the hierarchy in the scenee
-	// 
-	// the target needs to be in the right space. we'd be doign a lot of extra work for doing it in world space
-	// make every piece of the problem relative to the hierarchy, making it the center of the universe
+	// this will be used as our conversion to get everything in the same space
+	a3real4x4* rig2hierarchy = &sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat.m;
 
-	// FIRST STEP:
-	// transform everything into the space of the skeleton / hierarchy (use the inverse function we've been using)
-	// we need it in this space because its the same space forward kinematics is ultimately solved in
-	// you have an effector, constraints, etc, move it into the skeletons space (same space as forward kinematic solution)
-	// transform everything into the space of the skeleton / hierarchy
+	a3vec4 hierarchy_affected_end; // index in hierarchy of the affected end joint
+	a3vec4 hierarchy_affected_hinge; // i'm assuming this is the elbow
+	a3vec4 hierarchy_affected_base; // the base joint of the affected (usually shoulder or hip)
+
+	hierarchy_affected_end = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected_end].transformMat.v3;
+	hierarchy_affected_hinge = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected_hinge].transformMat.v3;
+	hierarchy_affected_base = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected_base].transformMat.v3;
+
+	// Transform the effector from the rig into hierarchy space
+	a3vec4 effector_end_rig_space = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_effector_end].transformMat.v3;
+	a3vec4 effector_end_hierarchy_space;
+	a3real4ProductTransform(effector_end_hierarchy_space.v, effector_end_rig_space.v, rig2hierarchy);
+
+	// Transform the constraint from the rig into the hierarchy space
+	a3vec4 effector_constraint_rig_space = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_constraint].transformMat.v3;
+	a3vec4 effector_constraint_hierarchy_space;
+	a3real4ProductTransform(effector_constraint_hierarchy_space.v, effector_constraint_rig_space.v, rig2hierarchy);
+
+
+	// GHOST CODE
+	//a3vec4 hierarchy_effector_end; // sceneGraphIndex_effector (index in the scene of the end effector -- wrist)
+	//hierarchy_affected = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected].transformMat.v3;
+	//a3vec4 rig_effector = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_effector].transformMat.v3;
+	//a3real4ProductTransform(hierarchy_effector.v, rig_effector.v, *rig2hierarchy);
+
+	/*	- Step 1 - */
+	// Transform everything into the space of the skeleton / hierarchy (use the inverse function we've been using)
+	// *	We need it in this space because its the same space forward kinematics is ultimately solved in
+	// *	We have an effector, constraints, etc, move it into the skeletons space (same space as forward kinematic solution)
+
+		// -> wrist/ankle effector
+		// -> pole vector constraint
+
+	// - OLD CODE - 
 	//a3mat4 rig2hierarchy = sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat;
-
 	//a3vec4 pEffectorWorld = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_effector_end].transformMat.v3;
 	//a3vec4 pPoleWorld = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_constraint].transformMat.v3;
 
@@ -475,26 +494,26 @@ void a3kinematicsUpdateLimbIK(a3_HierarchyState const* sceneGraphState,
 	//a3vec4 pHinge = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected_hinge].transformMat.v3;
 	//a3vec4 pEnd = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected_end].transformMat.v3;
 
-	// MAIN STEP:
-		// - IMPLEMENTATION NOTES - 
-	// solve joint to object for end, hinge, base
+
+	/* - MAIN STEP - */
+	// Solve joint to object for end, hinge, base
+
 	// -> end position*
-	// -> hinge position*
-	// ONE THING: you have to check if the target is too far away because you could have a hyper extention. if its too far away, your problem is solved its a straight line ur done
-	// 1. base joint to end effector vector (and distance)
-	// 2. base joint to pole vector constraint - oyu need to map the arm triangle to the imaginary plane of the pole vector
-	//		- geometric solution (describeed in the slides, walks through step by step)
-	//		- algebraic solution
-	//		- either way, you need the planes normal
-	// 3. plane normal = cross product of step 1 and 2 (base to pole) x (base to end)
-	// 4. geometric (Heron's formula) or algebraic (law of cosines)
-		// -> solves elbow position
-	// 5. "look at" solves shoulder and elbow rotations
-	// DONT OVER THINK IT ITS NOT THAT MANY LINES OF CODE smiles :)
-	// 
+	// -> hinge position
+
+	// You have to check if the target is too far away because you could have hyper extension. If it's too far, your problem is solved
+	// 1. Base joint to end effector vector (and distance)
+	// 2. Base joint to pole vector constraint
+	//		- Map the arm triangle to the imaginary plane of the pole vector
+	//		- Gemoetric solution
+	// 3. Plane normal = cross product of step 1 and 2 (base to pole) x (base to end)
+	// 4. Geometric (Heron's formula) or algebraic (law of cosines)
+	//		-> Solves elbow position
+	// 5. "Look-at" solves shoulder and elbow rotations
 
 
-	// LAST STEP:
+	/* - LAST STEP - */
+
 	// resolve every affected joint:
 	// -> because each joint depends on the parent, you need to start closer to the root and then down. ORDER MATTERS!
 	// a3kinematicsResolvePostIK
