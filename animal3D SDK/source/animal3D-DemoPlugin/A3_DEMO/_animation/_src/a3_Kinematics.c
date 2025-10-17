@@ -1,4 +1,9 @@
 /*
+Authors:
+Joseph Isaacs & Seth Riddensdale
+*/
+
+/*
 	Copyright 2011-2025 Daniel S. Buckstein
 
 	Licensed under the Apache License, Version 2.0 (the "License");
@@ -157,6 +162,8 @@ a3i32 a3kinematicsSolveInversePartial(const a3_HierarchyState* hierarchyState, c
 					hierarchyState->hierarchy->nodes[i].parentIndex);
 			}
 		}
+
+
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-3
@@ -363,13 +370,15 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
+
+
 	//a3real3x3 lookAt;
 	a3mat4 joint2object;
 
 	// FIRST STEP: Put everything in a common space
 	a3real4x4* rig2hierarchy = &sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat.m;
-	a3vec4 hierarchy_affected; // eye
-	a3vec4 hierarchy_effector; // target
+	a3vec4 hierarchy_affected; // eye of the 
+	a3vec4 hierarchy_effector; // tiger
 
 	hierarchy_affected = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected].transformMat.v3;
 	a3vec4 rig_effector = sceneGraphState->objectSpace->hpose_base[sceneGraphIndex_effector].transformMat.v3;
@@ -386,16 +395,16 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	a3vec3 upBasis;
 
 	// get the difference (effector - affected)
-	a3real3Diff(directionBasis.v, hierarchy_effector.v, hierarchy_affected.v);
+	a3real3Diff(directionBasis.v, hierarchy_affected.v, hierarchy_effector.v);
 	a3real3Normalize(directionBasis.v);
 
 	// find the side and accurate up bases
 	a3real3Cross(sideBasis.v,  worldUp.v, directionBasis.v);
+	a3real3Normalize(sideBasis.v);
+	
 	a3real3Cross(upBasis.v, directionBasis.v, sideBasis.v);
-	a3real3Cross(directionBasis.v, sideBasis.v, upBasis.v);
 
 	// normalize all the bases
-	a3real3Normalize(sideBasis.v);
 	a3real3Normalize(upBasis.v);
 	a3real3Normalize(directionBasis.v);
 
@@ -413,7 +422,7 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	// add the translation back to the joint2ob
 
 	// do not trust
-	//	a3real4x4MakeLookAt(joint2object, 0, hierarchy_affected.v3.v, hierarchy_effector.v3.v, worldUp);
+//	a3real4x4MakeLookAt(joint2object, 0, hierarchy_affected.v3.v, hierarchy_effector.v3.v, worldUp);
 
 	// LAST STEP: resolve every affected joint:
 	a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected, joint2object.m);
