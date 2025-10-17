@@ -118,7 +118,7 @@ static inline void a3kinematicsSolveInverseRoot(const a3_HierarchyState* hierarc
 //-----------------------------------------------------------------------------
 
 	// T[root_local] = T[root_object]
-	hierarchyState->localSpace->hpose_base[index].transformMat = hierarchyState->objectSpace->hpose_base[index].transformMat;
+	hierarchyState->localSpace->hpose_base[index] = hierarchyState->objectSpace->hpose_base[index];
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-3
@@ -364,56 +364,59 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 //-----------------------------------------------------------------------------
 
 	//a3real3x3 lookAt;
-	a3real4x4 joint2object;
+	a3mat4 joint2object;
 
 	// FIRST STEP: Put everything in a common space
-	a3mat4 rig2hierarchy = sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat;
-	a3mat4 hierarchy_affected; // eye
-	a3mat4 hierarchy_effector; // target
+	a3real4x4* rig2hierarchy = &sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat.m;
+	a3vec4 hierarchy_affected; // eye
+	a3vec4 hierarchy_effector; // target
 
-	hierarchy_affected = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected].transformMat;
-	a3mat4 rig_effector = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_effector].transformMat;
-	a3real4ProductTransform(hierarchy_effector.v3.v, rig_effector.v3.v, rig2hierarchy.m);
+	hierarchy_affected = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected].transformMat.v3;
+	a3vec4 rig_effector = sceneGraphState->objectSpace->hpose_base[sceneGraphIndex_effector].transformMat.v3;
+	a3real4ProductTransform(hierarchy_effector.v, rig_effector.v, *rig2hierarchy);
 
 	// SECOND STEP: Create the lookAt matrix
-	a3real3 worldUp = { 0, 1, 0 }; 
+	a3vec3 worldUp = { 0, 1, 0 }; 
 
 	// use only vector3s for this, cross product can be finnicky with vector4s
 	// dont use make look at, we need to construct the bases manually
 
-	a3real3 directionBasis;
-	a3real3 sideBasis;
-	a3real3 upBasis;
+	a3vec3 directionBasis;
+	a3vec3 sideBasis;
+	a3vec3 upBasis;
 
 	// get the difference (effector - affected)
-	a3real3Diff(directionBasis, hierarchy_effector.v3.v, hierarchy_affected.v3.v);
-	a3real3Normalize(directionBasis);
+	a3real3Diff(directionBasis.v, hierarchy_effector.v, hierarchy_affected.v);
+	a3real3Normalize(directionBasis.v);
 
 	// find the side and accurate up bases
-	a3real3Cross(sideBasis, worldUp, directionBasis);
-	a3real3Cross(upBasis, directionBasis, sideBasis);
+	a3real3Cross(sideBasis.v,  worldUp.v, directionBasis.v);
+	a3real3Cross(upBasis.v, directionBasis.v, sideBasis.v);
+	a3real3Cross(directionBasis.v, sideBasis.v, upBasis.v);
 
 	// normalize all the bases
-	a3real3Normalize(directionBasis);
-	a3real3Normalize(sideBasis);
-	a3real3Normalize(upBasis);
+	a3real3Normalize(sideBasis.v);
+	a3real3Normalize(upBasis.v);
+	a3real3Normalize(directionBasis.v);
 
 	// then we set the matrix
-	a3real4x4Set(joint2object,
-		upBasis[0], upBasis[1], upBasis[2], 0,
-		sideBasis[0], sideBasis[1], sideBasis[2], 0,
-		directionBasis[0], directionBasis[1], directionBasis[2], 0,
-		hierarchy_affected.v3.x, hierarchy_affected.v3.y, hierarchy_affected.v3.z, 1);
+	a3real4Set(joint2object.v0.v, sideBasis.x, sideBasis.y, sideBasis.z, 0);
+	a3real4Set(joint2object.v1.v, upBasis.x, upBasis.y, upBasis.z, 0);
+	a3real4Set(joint2object.v2.v, directionBasis.x, directionBasis.y, directionBasis.z, 0);
+	a3real4Set(joint2object.v3.v, hierarchy_affected.x, hierarchy_affected.y, hierarchy_affected.z, 1);
+	//a3real4x4Set(joint2object,
+	//	sideBasis.x, sideBasis.y, sideBasis.z, 0,
+	//	upBasis.x, upBasis.y, upBasis.z, 0,
+	//	directionBasis.x, directionBasis.y, directionBasis.z, 0,
+	//	hierarchy_affected.x, hierarchy_affected.y, hierarchy_affected.z, 1);
 
 	// add the translation back to the joint2ob
-
-
 
 	// do not trust
 	//	a3real4x4MakeLookAt(joint2object, 0, hierarchy_affected.v3.v, hierarchy_effector.v3.v, worldUp);
 
 	// LAST STEP: resolve every affected joint:
-	a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected, joint2object);
+	a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected, joint2object.m);
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-3
