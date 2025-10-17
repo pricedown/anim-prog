@@ -392,7 +392,7 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	a3real3Diff(directionBasis.v, hierarchy_effector.v, hierarchy_affected.v);
 
 	a3real3CrossUnit(sideBasis.v, worldUp.v, directionBasis.v);
-	a3real3Cross(upBasis.v, sideBasis.v, directionBasis.v); 	// swapping this
+	a3real3Cross(upBasis.v, directionBasis.v, sideBasis.v); 	// swapping this
 
 	// normalize all the bases
 	a3real3Normalize(directionBasis.v);
@@ -515,7 +515,7 @@ void a3kinematicsUpdateLimbIK(a3_HierarchyState const* sceneGraphState,
 	angle *= a3real_rad2deg;
 
 	// the position is the forward vector from the base to the affector, rotated about the plane normal by angle.
-	
+	// somehow tho, heightmag & basemag are getting messed up
 	a3real heightMagnitude = a3sind(angle);
 	a3real baseMagnitude = a3cosd(angle);
 
@@ -534,7 +534,6 @@ void a3kinematicsUpdateLimbIK(a3_HierarchyState const* sceneGraphState,
 	a3real4Set(j2obj_hinge.v1.v, adj_up.x, adj_up.y, adj_up.z, 0);
 	a3real4Set(j2obj_hinge.v2.v, adj_forward.x, adj_forward.y, adj_forward.z, 0);
 	a3real4Set(j2obj_hinge.v3.v, hierarchy_affected_base.x, hierarchy_affected_base.y, hierarchy_affected_base.z, 1);
-
 
 	/* - LAST STEP - */
 	// resolve every affected joint:
