@@ -140,8 +140,8 @@ a3i32 a3spatialPoseRestore(a3_SpatialPose* spatialPose, const a3_SpatialPoseChan
 		// extract rotation by dividing columns by respective scale
 		a3mat3 R;
 		a3real3QuotientS(R.v0.v, spatialPose->transformMat.v0.v, spatialPose->scale.x);
-		a3real3QuotientS(R.v0.v, spatialPose->transformMat.v1.v, spatialPose->scale.y);
-		a3real3QuotientS(R.v0.v, spatialPose->transformMat.v2.v, spatialPose->scale.z);
+		a3real3QuotientS(R.v1.v, spatialPose->transformMat.v1.v, spatialPose->scale.y);
+		a3real3QuotientS(R.v2.v, spatialPose->transformMat.v2.v, spatialPose->scale.z);
 
 		// extract angles (see notes for how we got this)
 		// keep in mind, this only works for one euler combination. realistically, we would have to do 42 euler order combinations

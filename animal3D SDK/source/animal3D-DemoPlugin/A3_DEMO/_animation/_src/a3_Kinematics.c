@@ -389,35 +389,25 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	// dont use make look at, we need to construct the bases manually
 
 	a3vec3 directionBasis;
-	a3vec3 sideBasis = { 0, 0, 1};
-	a3vec3 upBasis = { 0, 1, 0 };
+	a3vec3 sideBasis;
+	a3vec3 upBasis;
 
 	// get the difference (effector - affected)
 	a3real3Diff(directionBasis.v, hierarchy_effector.v, hierarchy_affected.v);
-	a3real3Normalize(directionBasis.v);
 
-	a3real3CrossUnit(sideBasis.v, directionBasis.v, worldUp.v);
-	a3real3Cross(upBasis.v, directionBasis.v, sideBasis.v); 	// swapping this
+	a3real3CrossUnit(sideBasis.v, worldUp.v, directionBasis.v);
+	a3real3Cross(upBasis.v, sideBasis.v, directionBasis.v); 	// swapping this
 
 	// normalize all the bases
-	a3real3Normalize(upBasis.v);
 	a3real3Normalize(directionBasis.v);
+	a3real3Normalize(sideBasis.v);
+	a3real3Normalize(upBasis.v);
 
 	// then we set the matrix
 	a3real4Set(joint2object.v0.v, sideBasis.x, sideBasis.y, sideBasis.z, 0);
 	a3real4Set(joint2object.v1.v, upBasis.x, upBasis.y, upBasis.z, 0);
 	a3real4Set(joint2object.v2.v, directionBasis.x, directionBasis.y, directionBasis.z, 0);
 	a3real4Set(joint2object.v3.v, hierarchy_affected.x, hierarchy_affected.y, hierarchy_affected.z, 1);
-	//a3real4x4Set(joint2object,
-	//	sideBasis.x, sideBasis.y, sideBasis.z, 0,
-	//	upBasis.x, upBasis.y, upBasis.z, 0,
-	//	directionBasis.x, directionBasis.y, directionBasis.z, 0,
-	//	hierarchy_affected.x, hierarchy_affected.y, hierarchy_affected.z, 1);
-
-	// add the translation back to the joint2ob
-
-	// do not trust
-//	a3real4x4MakeLookAt(joint2object, 0, hierarchy_affected.v3.v, hierarchy_effector.v3.v, worldUp);
 
 	// LAST STEP: resolve every affected joint:
 	a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected, joint2object.m);
