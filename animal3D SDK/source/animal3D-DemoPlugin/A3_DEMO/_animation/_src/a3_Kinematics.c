@@ -512,12 +512,12 @@ void a3kinematicsUpdateLimbIK(a3_HierarchyState const* sceneGraphState,
 
 	// Calculate law of cosines
 	angle = a3acosd(((a * a) - (b * b) - (c * c)) / (-2 * b * c));
-	angle *= a3real_rad2deg;
+	angle *= a3real_deg2rad;
 
 	// the position is the forward vector from the base to the affector, rotated about the plane normal by angle.
 	// somehow tho, heightmag & basemag are getting messed up
-	a3real heightMagnitude = a3sind(angle);
-	a3real baseMagnitude = a3cosd(angle);
+	a3real heightMagnitude = a3sindv(angle);
+	a3real baseMagnitude = a3sindv(angle);
 
 	a3vec3 adj_forward;
 	a3vec3 adj_up;
