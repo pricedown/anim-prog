@@ -370,8 +370,6 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 //****TO-DO-ANIM-PROJECT-3: IMPLEMENT ME
 //-----------------------------------------------------------------------------
 
-
-
 	//a3real3x3 lookAt;
 	a3mat4 joint2object;
 
@@ -379,9 +377,9 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	a3real4x4* rig2hierarchy = &sceneGraphState->localSpaceInv->hpose_base[sceneGraphIndex_hierarchyObj].transformMat.m;
 	a3vec4 hierarchy_affected; // eye of the 
 	a3vec4 hierarchy_effector; // tiger
-
+	
 	hierarchy_affected = activeHS->objectSpace->hpose_base[hierarchyObjIndex_affected].transformMat.v3;
-	a3vec4 rig_effector = sceneGraphState->objectSpace->hpose_base[sceneGraphIndex_effector].transformMat.v3;
+	a3vec4 rig_effector = sceneGraphState->localSpace->hpose_base[sceneGraphIndex_effector].transformMat.v3;
 	a3real4ProductTransform(hierarchy_effector.v, rig_effector.v, *rig2hierarchy);
 
 	// SECOND STEP: Create the lookAt matrix
@@ -391,18 +389,15 @@ void a3kinematicsUpdateLookAtIK(a3_HierarchyState const* sceneGraphState,
 	// dont use make look at, we need to construct the bases manually
 
 	a3vec3 directionBasis;
-	a3vec3 sideBasis;
-	a3vec3 upBasis;
+	a3vec3 sideBasis = { 0, 0, 1};
+	a3vec3 upBasis = { 0, 1, 0 };
 
 	// get the difference (effector - affected)
-	a3real3Diff(directionBasis.v, hierarchy_affected.v, hierarchy_effector.v);
+	a3real3Diff(directionBasis.v, hierarchy_effector.v, hierarchy_affected.v);
 	a3real3Normalize(directionBasis.v);
 
-	// find the side and accurate up bases
-	a3real3Cross(sideBasis.v,  worldUp.v, directionBasis.v);
-	a3real3Normalize(sideBasis.v);
-	
-	a3real3Cross(upBasis.v, directionBasis.v, sideBasis.v);
+	a3real3CrossUnit(sideBasis.v, directionBasis.v, worldUp.v);
+	a3real3Cross(upBasis.v, directionBasis.v, sideBasis.v); 	// swapping this
 
 	// normalize all the bases
 	a3real3Normalize(upBasis.v);
