@@ -519,28 +519,28 @@ void a3kinematicsUpdateLimbIK(a3_HierarchyState const* sceneGraphState,
 	a3real heightMagnitude = a3sind(angle);
 	a3real baseMagnitude = a3cosd(angle);
 
-	a3real3 adj_forward;
-	a3real3 adj_up;
+	a3vec3 adj_forward;
+	a3vec3 adj_up;
 
 	// this might need to be flipped (base and height magnitude)
-	a3real3ProductS(adj_forward, baseToEnd, baseMagnitude);
-	a3real3ProductS(adj_up, upVector, heightMagnitude);
+	a3real3ProductS(adj_forward.v, baseToEnd, baseMagnitude);
+	a3real3ProductS(adj_up.v, upVector, heightMagnitude);
 
-	/*
-	
-	a3real4Set(joint2object.v0.v, sideBasis.x, sideBasis.y, sideBasis.z, 0);
-	a3real4Set(joint2object.v1.v, upBasis.x, upBasis.y, upBasis.z, 0);
-	a3real4Set(joint2object.v2.v, directionBasis.x, directionBasis.y, directionBasis.z, 0);
-	a3real4Set(joint2object.v3.v, hierarchy_affected.x, hierarchy_affected.y, hierarchy_affected.z, 1);
+	a3vec3 adj_side;
+	a3real3CrossUnit(adj_side.v, adj_up.v, adj_forward.v);
 
-	*/
+	a3mat4 j2obj_hinge;
+	a3real4Set(j2obj_hinge.v0.v, adj_side.x, adj_side.y, adj_side.z, 0);
+	a3real4Set(j2obj_hinge.v1.v, adj_up.x, adj_up.y, adj_up.z, 0);
+	a3real4Set(j2obj_hinge.v2.v, adj_forward.x, adj_forward.y, adj_forward.z, 0);
+	a3real4Set(j2obj_hinge.v3.v, hierarchy_affected_base.x, hierarchy_affected_base.y, hierarchy_affected_base.z, 1);
 
 
 	/* - LAST STEP - */
 	// resolve every affected joint:
 	// -> because each joint depends on the parent, you need to start closer to the root and then down. ORDER MATTERS!
 
-	//a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected_base, joint2object.m);
+	a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected_base, j2obj_hinge.m);
 	//a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected_hinge, joint2object.m);
 	//a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected_end, joint2object.m);
 
