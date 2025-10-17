@@ -483,39 +483,66 @@ void a3kinematicsUpdateLimbIK(a3_HierarchyState const* sceneGraphState,
 	a3real hingeToEndLength = a3real3Distance(hierarchy_affected_hinge.v, hierarchy_affected_end.v); // elbow to wrist
 	a3real baseToEndLength = a3real3Distance(hierarchy_affected_base.v, hierarchy_affected_end.v); // shoulder to wrist
 
-	a3real3 baseToEnd;
-	a3real3Diff(baseToEnd, hierarchy_affected_end.v, hierarchy_affected_base.v);
-	a3real3 baseToPoleConstraint;
-	a3real3Diff(baseToPoleConstraint, pole_vector_constraint_hierarchy_space.v, hierarchy_affected_base.v);
-
-	a3real3 planeNormal;
-	a3real3Cross(planeNormal, hierarchy_affected_end.v, baseToEnd);
-
+	// somewhere here we check if hyper extended
+	// if(isHyperextendede) 
+	//		push(fork-bomb, anim-prog-repository);
 
 	// 1. Base joint to end effector vector (and distance)
 	// 2. Base joint to pole vector constraint
 	//		- Map the arm triangle to the imaginary plane of the pole vector
 	//		- Gemoetric solution
+	a3real3 baseToEnd;
+	a3real3Diff(baseToEnd, hierarchy_affected_end.v, hierarchy_affected_base.v);
+	a3real3 baseToPoleConstraint;
+	a3real3Diff(baseToPoleConstraint, pole_vector_constraint_hierarchy_space.v, hierarchy_affected_base.v);
+
 	// 3. Plane normal = cross product of step 1 and 2 (base to pole) x (base to end)
-	// 4. Geometric (Heron's formula) or algebraic (law of cosines)
-	//		-> Solves elbow position
-	// 5. "Look-at" solves shoulder and elbow rotations
+	a3real3 planeNormal;
+	a3real3CrossUnit(planeNormal, hierarchy_affected_end.v, baseToEnd);
 
+	// we get the up vector to use in our calculations
+	a3real3 upVector;
+	a3real3CrossUnit(upVector, baseToEnd, planeNormal);
 
+	// 4. Algebraic (law of cosines) -> Solves elbow position
+	a3real angle, a, b, c;
+	a = hingeToEndLength;
+	b = baseToHingeLength;
+	c = baseToEndLength;
 
+	// Calculate law of cosines
+	angle = a3acosd(((a * a) - (b * b) - (c * c)) / (-2 * b * c));
+	angle *= a3real_rad2deg;
 
+	// the position is the forward vector from the base to the affector, rotated about the plane normal by angle.
+	
+	a3real heightMagnitude = a3sind(angle);
+	a3real baseMagnitude = a3cosd(angle);
 
+	a3real3 adj_forward;
+	a3real3 adj_up;
 
+	// this might need to be flipped (base and height magnitude)
+	a3real3ProductS(adj_forward, baseToEnd, baseMagnitude);
+	a3real3ProductS(adj_up, upVector, heightMagnitude);
 
+	/*
+	
+	a3real4Set(joint2object.v0.v, sideBasis.x, sideBasis.y, sideBasis.z, 0);
+	a3real4Set(joint2object.v1.v, upBasis.x, upBasis.y, upBasis.z, 0);
+	a3real4Set(joint2object.v2.v, directionBasis.x, directionBasis.y, directionBasis.z, 0);
+	a3real4Set(joint2object.v3.v, hierarchy_affected.x, hierarchy_affected.y, hierarchy_affected.z, 1);
+
+	*/
 
 
 	/* - LAST STEP - */
-
 	// resolve every affected joint:
 	// -> because each joint depends on the parent, you need to start closer to the root and then down. ORDER MATTERS!
-	// a3kinematicsResolvePostIK
-	// a3kinematicsResolvePostIK
-	// a3kinematicsResolvePostIK
+
+	//a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected_base, joint2object.m);
+	//a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected_hinge, joint2object.m);
+	//a3kinematicsResolvePostIK(activeHS, baseHS, poseGroup, hierarchyObjIndex_affected_end, joint2object.m);
 
 //-----------------------------------------------------------------------------
 //****END-TO-DO-PROJECT-3
