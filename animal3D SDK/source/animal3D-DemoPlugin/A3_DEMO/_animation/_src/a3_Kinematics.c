@@ -483,7 +483,13 @@ void a3kinematicsUpdateLimbIK(a3_HierarchyState const* sceneGraphState,
 	a3real hingeToEndLength = a3real3Distance(hierarchy_affected_hinge.v, hierarchy_affected_end.v); // elbow to wrist
 	a3real baseToEndLength = a3real3Distance(hierarchy_affected_base.v, hierarchy_affected_end.v); // shoulder to wrist
 
+	a3real3 baseToEnd;
+	a3real3Diff(baseToEnd, hierarchy_affected_end.v, hierarchy_affected_base.v);
+	a3real3 baseToPoleConstraint;
+	a3real3Diff(baseToPoleConstraint, pole_vector_constraint_hierarchy_space.v, hierarchy_affected_base.v);
 
+	a3real3 planeNormal;
+	a3real3Cross(planeNormal, hierarchy_affected_end.v, baseToEnd);
 
 
 	// 1. Base joint to end effector vector (and distance)
