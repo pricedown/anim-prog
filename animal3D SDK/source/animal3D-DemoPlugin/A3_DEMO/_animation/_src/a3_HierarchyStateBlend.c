@@ -189,6 +189,10 @@ a3real4r a3blendOpNEAR4(a3real4 v_out, a3real4 const v0, a3real4 const v1, a3rea
 
 a3real4r a3blendOpLERP4(a3real4 v_out, a3real4 const v0, a3real4 const v1, a3real const u)
 {
+	v_out[0] = (v1[0] - v0[0]) * u + v0[0];
+	v_out[1] = (v1[1] - v0[1]) * u + v0[1];
+	v_out[2] = (v1[2] - v0[2]) * v0[2];
+	// ignores fourth column
 	return v_out;
 }
 
@@ -321,7 +325,9 @@ a3real4r a3blendOpLERP4X4(a3real4 m_out, a3real4 const m0, a3real4 const m1, a3r
 a3_SpatialPose* a3spatialPoseOpIdentity(a3_SpatialPose * pose_out)
 {
 	pose_out->transformMat = a3mat4_identity;
-	// ...
+	pose_out->rotate = a3vec4_one;
+	pose_out->scale = a3vec4_one;
+	pose_out->translate = a3vec4_one;
 
 	// done
 	return pose_out;
@@ -330,8 +336,7 @@ a3_SpatialPose* a3spatialPoseOpIdentity(a3_SpatialPose * pose_out)
 // pointer-based LERP operation for single spatial pose
 a3_SpatialPose* a3spatialPoseOpLERP(a3_SpatialPose * pose_out, a3_SpatialPose const* pose0, a3_SpatialPose const* pose1, a3real const u)
 {
-
-	// done
+	a3spatialPoseLerp(pose_out, pose0, pose1, u);
 	return pose_out;
 }
 
@@ -341,8 +346,9 @@ a3_SpatialPose* a3spatialPoseOpLERP(a3_SpatialPose * pose_out, a3_SpatialPose co
 // pointer-based reset/identity operation for hierarchical pose
 a3_HierarchyPose* a3hierarchyPoseOpIdentity(a3_HierarchyPose * pose_out)
 {
-
-	// done
+	pose_out->hpose_base->rotate = a3vec4_one;
+	pose_out->hpose_base->scale = a3vec4_one;
+	pose_out->hpose_base->translate = a3vec4_one;
 	return pose_out;
 }
 
