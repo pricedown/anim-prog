@@ -41,6 +41,7 @@ a3ret a3spatialPoseBlendTreeCreate(a3_SpatialPoseBlendTree* blendTree, a3_Hierar
 
 	blendTree->blendTreeDescriptor = blendTreeDescriptor;
 	blendTree->nodes = (a3_SpatialPoseBlendNode*)malloc(sizeof(a3_SpatialPoseBlendNode) * blendTreeDescriptor->numNodes);
+	memset(blendTree->nodes, 0, sizeof(a3_SpatialPoseBlendNode) * blendTreeDescriptor->numNodes);
 
 	return 0;
 }
@@ -71,6 +72,30 @@ a3ret a3spatialPoseBlendTreeExecute(a3_SpatialPoseBlendTree const* blendTree)
 {
 	if (!blendTree)
 		return -1;
+
+	a3_BlendOp op;
+	for (a3ui32 i = 0; i < blendTree->blendTreeDescriptor->numNodes; i++)
+	{
+		// Rotation
+		op.op = blendTree->nodes[i].blendOpSet->op_rotate;
+		op.v_out = &blendTree->nodes[i].pose_out->rotate.r;
+		op.exec = blendTree->nodes[i].blendOpSet->exec;
+
+		// pass controls
+		op.vCount = blendTree->nodes[i].vCount;
+		for (int v = 0; v < op.vCount; v++)
+			op.v_ctrl[v] = &blendTree->nodes[i].pose_ctrl[v]->rotate.x;
+
+		// pass inputs
+		op.uCount = blendTree->nodes[i].uCount;
+		for (int u = 0; u < op.uCount; u++)
+			op.u[u] = blendTree->nodes[i].u[u];
+
+		// TODO: scale, translation
+
+		blendTree->nodes[i].blendOpSet->exec(&op);
+	}
+
 	return 0;
 }
 
@@ -293,7 +318,7 @@ a3real4r a3blendOpLERP4X4(a3real4 m_out, a3real4 const m0, a3real4 const m1, a3r
 //-----------------------------------------------------------------------------
 
 // pointer-based reset/identity operation for single spatial pose
-a3_SpatialPose* a3spatialPoseOpIdentity(a3_SpatialPose* pose_out)
+a3_SpatialPose* a3spatialPoseOpIdentity(a3_SpatialPose * pose_out)
 {
 	pose_out->transformMat = a3mat4_identity;
 	// ...
@@ -303,7 +328,7 @@ a3_SpatialPose* a3spatialPoseOpIdentity(a3_SpatialPose* pose_out)
 }
 
 // pointer-based LERP operation for single spatial pose
-a3_SpatialPose* a3spatialPoseOpLERP(a3_SpatialPose* pose_out, a3_SpatialPose const* pose0, a3_SpatialPose const* pose1, a3real const u)
+a3_SpatialPose* a3spatialPoseOpLERP(a3_SpatialPose * pose_out, a3_SpatialPose const* pose0, a3_SpatialPose const* pose1, a3real const u)
 {
 
 	// done
@@ -314,7 +339,7 @@ a3_SpatialPose* a3spatialPoseOpLERP(a3_SpatialPose* pose_out, a3_SpatialPose con
 //-----------------------------------------------------------------------------
 
 // pointer-based reset/identity operation for hierarchical pose
-a3_HierarchyPose* a3hierarchyPoseOpIdentity(a3_HierarchyPose* pose_out)
+a3_HierarchyPose* a3hierarchyPoseOpIdentity(a3_HierarchyPose * pose_out)
 {
 
 	// done
@@ -322,7 +347,7 @@ a3_HierarchyPose* a3hierarchyPoseOpIdentity(a3_HierarchyPose* pose_out)
 }
 
 // pointer-based LERP operation for hierarchical pose
-a3_HierarchyPose* a3hierarchyPoseOpLERP(a3_HierarchyPose* pose_out, a3_HierarchyPose const* pose0, a3_HierarchyPose const* pose1, a3real const u)
+a3_HierarchyPose* a3hierarchyPoseOpLERP(a3_HierarchyPose * pose_out, a3_HierarchyPose const* pose0, a3_HierarchyPose const* pose1, a3real const u)
 {
 
 	// done

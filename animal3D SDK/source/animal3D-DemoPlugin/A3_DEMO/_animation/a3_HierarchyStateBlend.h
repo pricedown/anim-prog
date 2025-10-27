@@ -165,7 +165,6 @@ a3ret a3spatialPoseBlendTreeRelease(a3_SpatialPoseBlendTree* blendTree);
 // configure node internally; set pointers
 a3ret a3spatialPoseBlendTreeConfigureNode(a3_SpatialPoseBlendTree const* blendTree, a3ui32 const nodeIndex);
 
-
 // execute tree from leaves to root
 a3ret a3spatialPoseBlendTreeExecute(a3_SpatialPoseBlendTree const* blendTree);
 
