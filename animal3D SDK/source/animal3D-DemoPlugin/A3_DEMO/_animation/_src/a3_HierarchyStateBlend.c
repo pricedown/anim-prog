@@ -24,6 +24,7 @@
 
 #include "../a3_HierarchyStateBlend.h"
 
+#include <string.h>
 #include <stdlib.h>
 
 //-----------------------------------------------------------------------------
@@ -192,7 +193,7 @@ a3real4r a3blendOpLERP4(a3real4 v_out, a3real4 const v0, a3real4 const v1, a3rea
 	v_out[0] = (v1[0] - v0[0]) * u + v0[0];
 	v_out[1] = (v1[1] - v0[1]) * u + v0[1];
 	v_out[2] = (v1[2] - v0[2]) * v0[2];
-	// ignores fourth column
+	// ignores fourth column?
 	return v_out;
 }
 
