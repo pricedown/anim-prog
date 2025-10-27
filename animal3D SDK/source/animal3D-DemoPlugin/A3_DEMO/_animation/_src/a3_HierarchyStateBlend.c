@@ -24,6 +24,7 @@
 
 #include "../a3_HierarchyStateBlend.h"
 
+#include <stdlib.h>
 
 //-----------------------------------------------------------------------------
 //****TO-DO-ANIM-PROJECT-4: IMPLEMENT ME
@@ -37,14 +38,23 @@ a3ret a3spatialPoseBlendTreeCreate(a3_SpatialPoseBlendTree* blendTree, a3_Hierar
 {
 	if (!blendTree || !blendTreeDescriptor)
 		return -1;
+
+	blendTree->blendTreeDescriptor = blendTreeDescriptor;
+	blendTree->nodes = (a3_SpatialPoseBlendNode*)malloc(sizeof(a3_SpatialPoseBlendNode) * blendTreeDescriptor->numNodes);
+
 	return 0;
 }
 
 // release blend tree
 a3ret a3spatialPoseBlendTreeRelease(a3_SpatialPoseBlendTree* blendTree)
 {
-	if (!blendTree)
+	if (!blendTree || !blendTree->nodes)
 		return -1;
+
+	free(blendTree->nodes);
+	blendTree->blendTreeDescriptor = 0;
+	blendTree->nodes = 0;
+
 	return 0;
 }
 
