@@ -700,25 +700,33 @@ void a3animation_init_animation(a3_DemoState const* demoState, a3_Scene_Animatio
 	a3hierarchyStateCreate(hierarchyState, hierarchy);
 
 	// blend tree hierarchy
-	a3hierarchyCreate(scene->blendTree, 5, 0);
-	a3hierarchySetNode(scene->blendTree, 0, -1, "blendTree_result");
-	a3hierarchySetNode(scene->blendTree, 1, 0, "blendTree_idle_fm_blend");
-	a3hierarchySetNode(scene->blendTree, 2, 1, "blendTree_idle_f");
-	a3hierarchySetNode(scene->blendTree, 3, 1, "blendTree_idle_m");
-	a3hierarchySetNode(scene->blendTree, 4, 0, "blendTree_idle_p");
+	a3_Hierarchy blendTreeDescriptor;
+	blendTreeDescriptor.nodes = 0;
+	a3hierarchyCreate(&blendTreeDescriptor, 5, 0);
+	a3hierarchySetNode(&blendTreeDescriptor, 0, -1, "blendTree_result");
+	a3hierarchySetNode(&blendTreeDescriptor, 1, 0, "blendTree_idle_fm_blend");
+	a3hierarchySetNode(&blendTreeDescriptor, 2, 1, "blendTree_idle_f");
+	a3hierarchySetNode(&blendTreeDescriptor, 3, 1, "blendTree_idle_m");
+	a3hierarchySetNode(&blendTreeDescriptor, 4, 0, "blendTree_idle_p");
+	a3spatialPoseBlendTreeCreate(scene->blendTree, &blendTreeDescriptor);
+	for (a3ui32 i = 0; i < scene->hierarchyState_skel_base->hierarchy->numNodes; i++)
+	{
+		a3spatialPoseBlendTreeConfigureNode(scene->blendTree, i);
+		// TODO: link control & result nodes
+	}
 	
 	// blend tree states
-	for (p = 0, j = scene->blendTree->numNodes; p < j; ++p)
+	for (p = 0, j = blendTreeDescriptor.numNodes; p < j; ++p)
 	{
 		hierarchyState = scene->hierarchyState_skel_blend + p;
 		hierarchyState->hierarchy = 0;
 		a3hierarchyStateCreate(hierarchyState, hierarchy);
 	}
-	
+
 	// control node
 	scene->obj_skeleton_ctrl->euler.z = a3real_oneeighty;
 	scene->obj_skeleton_ctrl->position.y = +a3real_four;
-	
+
 	// xbot
 	scene->obj_skeleton->euler.x = a3real_ninety;
 	scene->obj_skeleton->euler.y = a3real_oneeighty;
@@ -732,8 +740,8 @@ void a3animation_init_animation(a3_DemoState const* demoState, a3_Scene_Animatio
 	// effectors
 	// do one update to get first pose for target IK frame
 	{
-		void a3animation_update_animation(a3_Scene_Animation* scene, a3f64 const dt, a3boolean const updateIK);
-		void a3animation_update_sceneGraph(a3_Scene_Animation* scene, a3f64 const dt);
+		void a3animation_update_animation(a3_Scene_Animation * scene, a3f64 const dt, a3boolean const updateIK);
+		void a3animation_update_sceneGraph(a3_Scene_Animation * scene, a3f64 const dt);
 		for (p = 0; p < 3; ++p)
 		{
 			a3animation_update_animation(scene, 0.0, false);
@@ -758,11 +766,11 @@ void a3animation_loadValidate(a3_DemoState* demoState, a3_Scene_Animation* scene
 	// initialize callbacks
 	a3_SceneCallbacks* const callbacks = demoState->sceneCallbacks + demoState_modeAnimation;
 	callbacks->scene = scene;
-	callbacks->handleInput =	(a3_Scene_EventCallback)		a3animation_input;
-	callbacks->handleUpdate =	(a3_Scene_EventCallback)		a3animation_update;
-	callbacks->handleRender =	(a3_Scene_EventCallbackConst)	a3animation_render;
-	callbacks->handleKeyPress = (a3_Scene_InputCallback)		a3animation_input_keyCharPress;
-	callbacks->handleKeyHold =	(a3_Scene_InputCallback)		a3animation_input_keyCharHold;
+	callbacks->handleInput = (a3_Scene_EventCallback)a3animation_input;
+	callbacks->handleUpdate = (a3_Scene_EventCallback)a3animation_update;
+	callbacks->handleRender = (a3_Scene_EventCallbackConst)a3animation_render;
+	callbacks->handleKeyPress = (a3_Scene_InputCallback)a3animation_input_keyCharPress;
+	callbacks->handleKeyHold = (a3_Scene_InputCallback)a3animation_input_keyCharHold;
 
 	// initialize cameras dependent on viewport
 	scene->proj_camera_main->aspect = demoState->frameAspect;
@@ -774,7 +782,7 @@ void a3animation_loadValidate(a3_DemoState* demoState, a3_Scene_Animation* scene
 
 	a3ui32 i, j;
 	a3ui32 const n_hierarchy = sizeof(scene->hierarchyState_skel) / sizeof(a3_HierarchyState);
-	
+
 	// animation
 	scene->sceneGraphState->hierarchy = scene->sceneGraph;
 	scene->hierarchyPoseGroup_skel->hierarchy = scene->hierarchy_skel;

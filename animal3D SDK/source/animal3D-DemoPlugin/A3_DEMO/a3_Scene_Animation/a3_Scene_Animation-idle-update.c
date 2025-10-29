@@ -234,6 +234,7 @@ void a3animation_update_animation_skeletal(
 		scene->hierarchyState_skel_blend_idle_p->animPose,							// src(1): idle_p
 		a3real_half, activeHS->hierarchy->numNodes);
 
+
 	// resolve final FK state:
 	// copy result to fk and run FK pipeline
 	a3hierarchyPoseCopy(activeHS_fk->animPose,				// dst: FK anim

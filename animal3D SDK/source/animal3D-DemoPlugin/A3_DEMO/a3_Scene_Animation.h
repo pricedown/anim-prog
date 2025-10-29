@@ -202,7 +202,7 @@ extern "C"
 		a3_HierarchyDisplayData display_main;
 		
 		// blend tree
-		a3_Hierarchy blendTree[1];
+		a3_SpatialPoseBlendTree blendTree[1];
 		union {
 			a3_HierarchyState hierarchyState_skel_blend[5];
 			struct {
