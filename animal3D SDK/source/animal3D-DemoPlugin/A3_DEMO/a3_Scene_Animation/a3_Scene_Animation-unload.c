@@ -39,6 +39,7 @@ void a3animation_unload(a3_DemoState const* demoState, a3_Scene_Animation* scene
 {
 	a3ui32 i, j;
 
+	// edited by Joseph
 	// blend tree
 	//for (i = 0, j = scene->blendTree->blendTreeDescriptor->numNodes; i < j; ++i)
 	//	a3hierarchyStateRelease(scene->hierarchyState_skel_blend + i);

@@ -700,6 +700,7 @@ void a3animation_init_animation(a3_DemoState const* demoState, a3_Scene_Animatio
 	a3hierarchyStateCreate(hierarchyState, hierarchy);
 
 	// blend tree hierarchy
+	I// edited by Joseph
 	a3_Hierarchy blendTreeDescriptor;
 	blendTreeDescriptor.nodes = 0;
 	a3hierarchyCreate(&blendTreeDescriptor, 5, 0);

@@ -27,6 +27,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+// Edited by Joseph
+
 //-----------------------------------------------------------------------------
 //****TO-DO-ANIM-PROJECT-4: IMPLEMENT ME
 //-----------------------------------------------------------------------------
@@ -40,6 +42,7 @@ a3ret a3spatialPoseBlendTreeCreate(a3_SpatialPoseBlendTree* blendTree, a3_Hierar
 	if (!blendTree || !blendTreeDescriptor)
 		return -1;
 
+	// Allocates adequate memory for all of the nodes
 	blendTree->blendTreeDescriptor = blendTreeDescriptor;
 	blendTree->nodes = (a3_SpatialPoseBlendNode*)malloc(sizeof(a3_SpatialPoseBlendNode) * blendTreeDescriptor->numNodes);
 	memset(blendTree->nodes, 0, sizeof(a3_SpatialPoseBlendNode) * blendTreeDescriptor->numNodes);
@@ -53,6 +56,7 @@ a3ret a3spatialPoseBlendTreeRelease(a3_SpatialPoseBlendTree* blendTree)
 	if (!blendTree || !blendTree->nodes)
 		return -1;
 
+	// Frees the memory for all of the nodes
 	free(blendTree->nodes);
 	blendTree->blendTreeDescriptor = 0;
 	blendTree->nodes = 0;

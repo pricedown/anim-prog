@@ -201,7 +201,7 @@ extern "C"
 		a3_HierarchyPoseGroup hierarchyPoseGroup_skel[1];
 		a3_HierarchyDisplayData display_main;
 		
-		// blend tree
+		// blend tree, edited by Joseph
 		a3_SpatialPoseBlendTree blendTree[1];
 		union {
 			a3_HierarchyState hierarchyState_skel_blend[5];
