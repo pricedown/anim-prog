@@ -40,12 +40,42 @@ extern "C"
 //-----------------------------------------------------------------------------
 
 // operation template for any real vector/matrix/array type
+// The ... is filled in by the executor
 typedef a3real* (*a3realOp)(a3real v_out[], ...);
 
 // forward declare blend operation type
 typedef struct a3_BlendOp a3_BlendOp;
 
 // operation template for executing an operation
+/*
+	Function pointer
+	Functions are just kept as addresses in memory to code. You create a call stack and put the local variables in before jumping every time you call a function
+
+	The executor is a function that returns a pointer to a blendOp, and receieves a pointer to a blendOp
+	Any function that matches this format: returns a blendOp pointer and takes ablendOp pointer, can be represented by this data type
+	The blendOp itself has some data aray and ...!!
+	The executor's job is to fill in the blanks!
+	The op itself the blendOp wants some arbitrary data 
+
+	There are some examples of initializing the source for this
+	You don't have to use the HierarchyStateBlend ops in general
+	They have a varying number of outputs and shit
+	The executor's job is to invoke each of these function in this way
+
+	It returns a blendOp pointer and takes a blendOp pointer and it calls a function that begins with an output array and
+	I am concat I am negate I am concat I am negate
+
+	a3blndOpExecute has no concrete definition
+
+	2 stages to this whole thing, but we've been concerned with the build stage
+	building happens once at load
+	You read all that data that your animator provided and then build
+	But execution stage
+	March through the hierarchy and multiply a bunch of times
+	There's pre-traversal and post-traversal. FK is parent first before child, this is a post-traversal algorithm. The children need to be resolved before the parent
+
+
+*/
 typedef a3_BlendOp const* (*a3blendOpExecute)(a3_BlendOp const* const blendOp);
 
 // limits
@@ -58,7 +88,50 @@ enum
 // replicable data structure for vector operations
 typedef struct a3_BlendOp
 {
+	/// <summary>
+	/// This system is exactly how Blueprint works as well. 
+	/// It's just a dependency tree: any value that depends on another valu.
+	/// Think of a blend node as a box, containing either literal stuff or knowledge of other stuff.
+	/// Knowledge of other stuff would be using pointers...
+	/// 
+	/// exec(utor): a tool, a thing, a process, that knows how to execute an operation
+	/// its job is to call a function *correctly*
+	/// it is also a function, whose job is calling another function
+	/// 
+	/// op(eration): the function that the executor is trained to call
+	/// could be lerp, concat, or negate,
+	/// the executor knows how to call this kind of function
+	/// 
+	/// v_out: arbitrary pointer to a real value, the output value
+	/// pointer to decouple the raw data from the thing that's operating on it
+	/// 
+	/// v_ctrl: controls of the operation
+	/// u: any number of independent variables, parameters, input values, whatever you want to call them
+	/// They're constant real pointers, why is that?
+	/// So you can plug other things into it without duplicating values. Maybe other nodes need to use that value
+	/// as a control. 
+	///
+	///	vCount: how many controls
+	/// uCount: how many inputs
+	/// like concat would have 2 controls 0 inputs
+	/// and identity would have 0 controls 0 inputs
+	///
+	/// Why const pointers? "a3real const* ..."
+	/// The value (a3real) keyword is affected by the const, since it goes to the left
+	/// It ensures that the blend node can't start editing the output of a different node, all it can do is consume!
+	/// ...A word about const: you should adopt the style of putting it on the very right of the thing you're affecting 
+	/// because it has an ambiguous exception when you put it on the far left. 
+	/// When you put it on the leftmost side it defers to affecting the next word (the word to the right of it)
+	/// The qualifier is meant to go on the RIGHT, not the LEFT
+	///
+	/// Instantiate the blendOps, one per node, and then a data pool, and then the build process is wiring the nodes and their pointers together
+	/// It's like connecting a complex electronic device
+	/// If you want unique data for every instance of a parameter or control you would need one of these for each instance
+	/// If you have a blend tree to describe multiple behaviors, you only need one hierarchy for those behaviors. Because that's just a guideline for how to build that one tree
+	/// The description (hierarchy) is separate from the embodiment (tree).
+	/// </summary>
 	a3blendOpExecute exec;							// execution function
+
 	a3realOp op;									// blend operation function
 	a3real* v_out;									// output value
 	a3real const* v_ctrl[a3blendOpLimitControl];	// control value set (maxed at 16 to pre-allocate array)
